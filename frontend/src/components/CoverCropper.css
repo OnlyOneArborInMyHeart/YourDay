@@ -1,0 +1,146 @@
+.cover-cropper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+/* —— 顶部明确提示：未保存 —— */
+.cover-cropper__banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 8px;
+}
+.cover-cropper__banner strong {
+  color: #c2410c;
+  font-weight: 700;
+}
+.cover-cropper__banner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18);
+  flex-shrink: 0;
+  animation: cover-banner-pulse 1.4s ease-in-out infinite;
+}
+@keyframes cover-banner-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18); }
+  50%      { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.05); }
+}
+
+.cover-cropper__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cover-cropper__shapes {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px;
+  background: var(--color-bg-elev);
+}
+.cover-cropper__shape {
+  border: none;
+  background: transparent;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-soft);
+  transition: all 0.15s;
+}
+.cover-cropper__shape.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.cover-cropper__hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.cover-cropper__stage {
+  position: relative;
+  width: min(560px, 70vw);
+  height: min(560px, 60vh);
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: hidden;
+  user-select: none;
+  display: grid;
+  place-items: center;
+}
+.cover-cropper__img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.cover-cropper__canvas {
+  display: none; /* 不需要直接显示 */
+}
+
+.cover-cropper__handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 1.5px solid var(--color-primary);
+  border-radius: 2px;
+}
+.cover-cropper__handle--nw { left: -6px;  top: -6px; }
+.cover-cropper__handle--n  { left: 50%;  top: -6px;  margin-left: -6px; }
+.cover-cropper__handle--ne { right: -6px; top: -6px; }
+.cover-cropper__handle--e  { right: -6px; top: 50%;  margin-top: -6px; }
+.cover-cropper__handle--se { right: -6px; bottom: -6px; }
+.cover-cropper__handle--s  { left: 50%;  bottom: -6px; margin-left: -6px; }
+.cover-cropper__handle--sw { left: -6px;  bottom: -6px; }
+.cover-cropper__handle--w  { left: -6px;  top: 50%;  margin-top: -6px; }
+
+.cover-cropper__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.cover-cropper__btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cover-cropper__btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  font-weight: 600;
+  /* 让"应用"按钮更显眼：略放大 + 阴影 */
+  padding: 8px 22px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+.cover-cropper__btn--primary:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+.cover-cropper__btn--primary:active {
+  transform: translateY(0);
+}

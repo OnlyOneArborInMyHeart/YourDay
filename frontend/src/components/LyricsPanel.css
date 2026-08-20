@@ -1,0 +1,222 @@
+/* —— QQ 音乐风格底部歌词抽屉 —— */
+.lyrics-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background: transparent;
+  border-top: none;
+  pointer-events: none;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.lyrics-drawer__inner {
+  display: flex;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px 32px;
+  pointer-events: auto;
+  background: rgba(12, 12, 20, 0.72);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  box-shadow: 0 -8px 48px rgba(0, 0, 0, 0.55);
+  animation: lyrics-slide-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes lyrics-slide-up {
+  from { transform: translateY(110%); }
+  to   { transform: translateY(0); }
+}
+
+/* 左侧：封面 + 曲目信息 */
+.lyrics-drawer__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 0 4px;
+  flex: 0 0 220px;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lyrics-drawer__cover {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.lyrics-drawer__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lyrics-drawer__track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lyrics-drawer__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.lyrics-drawer__label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.5px;
+}
+
+/* 中间：仅三句歌词 */
+.lyrics-drawer__scroll-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0;
+}
+
+.lyrics-drawer__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.lyrics-drawer__line {
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  transition: color 0.4s ease, font-weight 0.4s ease, opacity 0.4s ease, transform 0.4s ease;
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: default;
+  user-select: none;
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+
+/* 上一句：淡出 */
+.lyrics-drawer__line--prev {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 13px;
+  opacity: 0.6;
+  transform: translateY(4px);
+}
+
+/* 当前句：高亮放大 */
+.lyrics-drawer__line--current {
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  opacity: 1;
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  transform: translateY(0) scale(1.04);
+  letter-spacing: 0.5px;
+}
+
+/* 下一句：次淡 */
+.lyrics-drawer__line--next {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  opacity: 0.7;
+  transform: translateY(-4px);
+}
+
+.lyrics-drawer__line--blank {
+  color: rgba(255, 255, 255, 0.15);
+  letter-spacing: 0.5em;
+}
+
+/* 右侧：关闭按钮 */
+.lyrics-drawer__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0 8px;
+  align-self: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lyrics-drawer__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* 空状态 */
+.lyrics-drawer__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 24px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 13px;
+}
+.lyrics-drawer__empty-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .lyrics-drawer__inner {
+    padding: 0 16px 20px;
+    border-radius: 16px 16px 0 0;
+  }
+  .lyrics-drawer__meta {
+    flex: 0 0 160px;
+    padding: 0 12px 0 2px;
+    gap: 8px;
+  }
+  .lyrics-drawer__cover {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .lyrics-drawer__title {
+    max-width: 90px;
+    font-size: 12px;
+  }
+  .lyrics-drawer__line--current {
+    font-size: 16px;
+  }
+  .lyrics-drawer__line--prev,
+  .lyrics-drawer__line--next {
+    font-size: 12px;
+  }
+}

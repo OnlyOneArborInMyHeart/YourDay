@@ -1,0 +1,261 @@
+/* 日记弹窗（双击日历格后弹出）—— 覆盖 EventModal.css 里 .modal { max-width:480px } 的限制 */
+.modal--diary {
+  width: min(1400px, 98vw);
+  max-width: min(1400px, 98vw);
+  height: min(900px, 94vh);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal--diary .modal__header {
+  flex-shrink: 0;
+  padding: 14px 22px;
+}
+.modal--diary .modal__footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0;
+  padding: 12px 22px;
+  background: var(--color-bg-elev);
+}
+
+.diary-modal__title {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  font-size: 0;
+  margin: 0;
+}
+.diary-modal__date {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.diary-modal__title-input {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.diary-modal__title-input:focus {
+  border-color: var(--color-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* 覆盖 EventModal.css 里 .modal__body 的样式：弹窗主体接管高度/滚动 */
+.diary-modal__body.modal__body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 22px 14px;
+}
+
+/* 复用日记编辑器 split 布局 — 占据中间全部高度 */
+.diary-editor__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  flex: 1 1 0;
+  min-height: 0;
+}
+.diary-editor__pane {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  overflow: hidden;
+  min-height: 0;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+.diary-editor__pane-label {
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: #f1f4ff;
+  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.diary-editor__textarea {
+  flex: 1 1 0;
+  width: 100%;
+  border: none;
+  outline: none;
+  padding: 16px 18px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  resize: none;
+  background: transparent;
+  color: var(--color-text);
+  min-height: 0;
+}
+.diary-editor__preview {
+  padding: 16px 20px;
+  overflow: auto;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-text);
+  flex: 1 1 0;
+  min-height: 0;
+}
+.diary-editor__preview h1,
+.diary-editor__preview h2,
+.diary-editor__preview h3 {
+  margin-top: 0.6em;
+  margin-bottom: 0.4em;
+  line-height: 1.3;
+}
+.diary-editor__preview h1 { font-size: 1.4em; }
+.diary-editor__preview h2 { font-size: 1.2em; }
+.diary-editor__preview h3 { font-size: 1.05em; }
+.diary-editor__preview p { margin: 0.5em 0; }
+.diary-editor__preview code {
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+.diary-editor__preview pre {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 6px;
+  overflow: auto;
+}
+.diary-editor__preview pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.diary-editor__preview blockquote {
+  border-left: 3px solid var(--color-primary);
+  background: #f1f4ff;
+  margin: 0.5em 0;
+  padding: 4px 12px;
+  color: #475569;
+  border-radius: 0 4px 4px 0;
+}
+.diary-editor__preview ul,
+.diary-editor__preview ol {
+  padding-left: 1.6em;
+  margin: 0.5em 0;
+}
+.diary-editor__preview a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.diary-editor__preview img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+.diary-editor__preview video,
+.diary-editor__preview audio {
+  max-width: 100%;
+  width: 100%;
+  margin: 6px 0;
+  border-radius: 6px;
+}
+.diary-editor__preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+.diary-editor__preview th,
+.diary-editor__preview td {
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.diary-editor__preview th {
+  background: #f1f4ff;
+}
+.diary-editor__empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.diary-editor__attachments {
+  border-top: 1px dashed var(--color-border);
+  padding-top: 12px;
+}
+.diary-editor__attachments-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.diary-editor__attachments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.diary-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  max-width: 100%;
+}
+.diary-attach--image { background: #f0f9ff; border-color: #bae6fd; }
+.diary-attach--video { background: #fdf4ff; border-color: #f0abfc; }
+.diary-attach--audio { background: #fefce8; border-color: #fde047; }
+.diary-attach__kind { font-size: 13px; }
+.diary-attach__name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.diary-attach__size {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.diary-attach__del {
+  font-size: 11px;
+  padding: 2px 8px !important;
+}
+
+@media (max-width: 720px) {
+  .modal--diary {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .diary-editor__split {
+    grid-template-columns: 1fr;
+  }
+  .diary-modal__title {
+    flex-wrap: wrap;
+  }
+}

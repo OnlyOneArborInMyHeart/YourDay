@@ -1,0 +1,115 @@
+.image-cropper {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.image-cropper__panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.image-cropper__stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(45deg, #1e293b 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(-45deg, #1e293b 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(45deg, transparent 75%, #1e293b 75%) 0 0 / 24px 24px,
+    linear-gradient(-45deg, transparent 75%, #1e293b 75%) 0 0 / 24px 24px,
+    #0b1220;
+}
+
+.image-cropper__img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  /* Cropper.js 接管显示，禁止原生拖动选择 */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-cropper__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #111827;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.image-cropper__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.image-cropper__label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-right: 4px;
+}
+
+.image-cropper__chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.image-cropper__chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+.image-cropper__chip.is-active {
+  background: var(--color-p2, #6366f1);
+  border-color: transparent;
+  color: #fff;
+}
+
+.image-cropper__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #0b1220;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.image-cropper__hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.image-cropper__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Cropper.js 在深色背景下的可读性微调 */
+.cropper-container .cropper-view-box,
+.cropper-container .cropper-face {
+  border-radius: 0;
+}
+.cropper-container .cropper-modal {
+  background: rgba(15, 23, 42, 0.6);
+}
+.cropper-container .cropper-bg {
+  background: transparent;
+}

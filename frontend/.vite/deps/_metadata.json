@@ -1,0 +1,40 @@
+{
+  "hash": "c6e32907",
+  "configHash": "6e81770a",
+  "lockfileHash": "5eb8266d",
+  "browserHash": "c2342390",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "8cd2d48a",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "2f9501f3",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "d834ea54",
+      "needsInterop": true
+    },
+    "lunar-typescript": {
+      "src": "../../node_modules/lunar-typescript/dist/index.mjs",
+      "file": "lunar-typescript.js",
+      "fileHash": "715d216e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-JCH2SJW3": {
+      "file": "chunk-JCH2SJW3.js"
+    },
+    "chunk-BUSYA2B4": {
+      "file": "chunk-BUSYA2B4.js"
+    }
+  }
+}

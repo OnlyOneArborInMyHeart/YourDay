@@ -1,0 +1,294 @@
+.todo-list {
+    width: 320px;
+    flex-shrink: 0;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 240px);
+    overflow: hidden;
+}
+
+.todo-list__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.todo-list__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text);
+}
+
+.todo-list__count {
+    font-size: 12px;
+    color: var(--color-text-soft);
+}
+
+.todo-list__items {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 8px 10px 14px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.todo-list__empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--color-text-soft);
+    font-size: 13px;
+    padding: 24px 16px;
+    text-align: center;
+}
+
+.todo-list__empty-icon {
+    font-size: 28px;
+    opacity: 0.7;
+}
+
+
+/* 待办项 */
+
+.todo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 10px 10px 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    background: var(--color-bg);
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s, opacity 0.2s;
+    position: relative;
+    overflow: hidden; /* 防止背景图越界 */
+}
+
+.todo-item:hover {
+    border-color: var(--color-border);
+}
+
+/* 背景图：绝对定位铺满，叠加白色蒙版保证文字可读 */
+.todo-item__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: inherit;
+    z-index: 0;
+    pointer-events: none;
+}
+.todo-item__bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.78) 0%,
+        rgba(255, 255, 255, 0.55) 55%,
+        rgba(255, 255, 255, 0.25) 100%
+    );
+}
+.todo-item.has-bg {
+    position: relative;
+}
+.todo-item.has-bg .todo-item__check,
+.todo-item.has-bg .todo-item__body,
+.todo-item.has-bg .todo-item__chip {
+    position: relative;
+    z-index: 1;
+}
+.todo-item.has-bg .todo-item__title,
+.todo-item.has-bg .todo-item__time,
+.todo-item.has-bg .todo-item__note {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7), 0 0 6px rgba(255, 255, 255, 0.5);
+}
+.todo-item__completed {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #15803d;
+    background: rgba(220, 252, 231, 0.85);
+    border-radius: 999px;
+    padding: 1px 7px;
+    margin-top: 2px;
+    align-self: flex-start;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* 优先级左边色块 */
+
+.todo-item--p1 {
+    border-left: 3px solid var(--color-p1);
+}
+
+.todo-item--p2 {
+    border-left: 3px solid var(--color-p2);
+}
+
+.todo-item--p3 {
+    border-left: 3px solid var(--color-p3);
+}
+
+
+/* 勾选按钮 */
+
+.todo-item__check {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.6px solid var(--color-border);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-top: 2px;
+    color: transparent;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.todo-item__check:hover {
+    border-color: var(--color-p2);
+}
+
+.todo-item__check.is-checked {
+    background: var(--color-p2);
+    border-color: var(--color-p2);
+    color: #fff;
+}
+
+.todo-item__check-icon {
+    display: block;
+}
+
+
+/* 主体 */
+
+.todo-item__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    min-width: 0;
+}
+
+.todo-item__time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-text-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.todo-item__time-sep {
+    opacity: 0.6;
+}
+
+.todo-item__time-dur {
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-bg-soft);
+    color: var(--color-text-soft);
+}
+
+.todo-item__title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-text);
+    word-break: break-word;
+    position: relative;
+    display: inline-block;
+}
+
+.todo-item__note {
+    font-size: 12px;
+    color: var(--color-text-soft);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+
+/* 优先级徽标 */
+
+.todo-item__chip {
+    flex-shrink: 0;
+    align-self: flex-start;
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.todo-item__chip--p1 {
+    background: rgba(231, 76, 60, 0.12);
+    color: var(--color-p1);
+}
+
+.todo-item__chip--p2 {
+    background: rgba(241, 196, 15, 0.15);
+    color: #b88b00;
+}
+
+.todo-item__chip--p3 {
+    background: rgba(46, 204, 113, 0.14);
+    color: var(--color-p3);
+}
+
+
+/* 已完成态：横线 + 灰色 */
+
+.todo-item.is-done .todo-item__body {
+    opacity: 0.55;
+}
+
+.todo-item.is-done .todo-item__title {
+    color: var(--color-text-soft);
+}
+
+.todo-item.is-done .todo-item__title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5px;
+    background: var(--color-text-soft);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.todo-item.is-done .todo-item__check {
+    background: var(--color-text-soft);
+    border-color: var(--color-text-soft);
+    color: var(--color-bg);
+}

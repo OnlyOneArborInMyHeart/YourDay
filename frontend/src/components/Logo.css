@@ -1,0 +1,95 @@
+/* YourDay Logo —— 我的世界像素风 */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  user-select: none;
+}
+
+/* 草方块：8x16 像素，每像素 4px -> 整体 32x64px */
+.logo__block {
+  display: flex;
+  flex-direction: column;
+  width: 32px;
+  height: 64px;
+  border: 2px solid #1a1a1a;
+  background: #1a1a1a;
+  box-shadow:
+    0 0 0 2px #5a8a3a inset,
+    0 4px 0 -1px rgba(0, 0, 0, 0.18);
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.logo__block-layer {
+  display: flex;
+  flex-direction: column;
+  height: 32px;
+  overflow: hidden;
+}
+
+.logo__pixel-row {
+  display: flex;
+  height: 4px;
+}
+
+.logo__pixel {
+  width: 4px;
+  height: 4px;
+  display: block;
+}
+
+/* 文字部分：主标 Press Start 2P，副标系统字体小字 */
+.logo__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 上下居中 */
+  align-items: flex-start; /* 文字保持左对齐 */
+  gap: 4px;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.logo__text-main {
+  font-family: 'Press Start 2P', 'VT323', 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: #4338ca;
+  text-shadow:
+    2px 2px 0 #c7d2fe,
+    4px 4px 0 #1a1a1a;
+  /* 像素字体在浏览器中做锐化 */
+  image-rendering: pixelated;
+}
+
+.logo__text-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  letter-spacing: 1.5px;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .logo__text-sub {
+    display: none;
+  }
+  .logo__text-main {
+    font-size: 16px;
+  }
+  .logo__block {
+    width: 24px;
+    height: 48px;
+  }
+  .logo__block-layer {
+    height: 24px;
+  }
+  .logo__pixel-row {
+    height: 3px;
+  }
+  .logo__pixel {
+    width: 3px;
+    height: 3px;
+  }
+}
