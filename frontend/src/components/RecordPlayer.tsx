@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { MusicTrack } from '../api/music';
 import './RecordPlayer.css';
 
@@ -146,14 +146,19 @@ interface Props {
   onTrackChange?: (track: { id: string; title: string; flavor: string; lyricsRaw: string | null }) => void;
   /** 当前曲目封面图 URL 变化时回调 */
   onCoverChange?: (coverUrl: string | null) => void;
+  /** 播放状态（progress/currentTime/duration）变化时回调 */
+  onProgressUpdate?: (info: { progress: number; currentTime: number; duration: number }) => void;
+  /** 用户在进度条上 seek 时回调（ratio: 0~1） */
+  onSeek?: (ratio: number) => void;
 }
 
-export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCoverChange }: Props) {
-  const tracks: Track[] = library.length > 0 ? tracksFromLibrary(library) : DEFAULT_TRACKS;
-  const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const synthRef = useRef<PlayerState>({ audioCtx: null, nodes: [], gain: null });
+export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void }, Props>(
+  ({ library = [], onTimeUpdate, onTrackChange, onCoverChange, onProgressUpdate, onSeek }, _ref) => {
+    const tracks: Track[] = library.length > 0 ? tracksFromLibrary(library) : DEFAULT_TRACKS;
+    const [idx, setIdx] = useState(0);
+    const [playing, setPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const synthRef = useRef<PlayerState>({ audioCtx: null, nodes: [], gain: null });
 
   // 曲目列表变化时回到第一首
   useEffect(() => {
@@ -257,17 +262,20 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
         setDuration(d);
         setProgress(audio.currentTime / d);
         onTimeUpdate?.(audio.currentTime);
+        onProgressUpdate?.({ progress: audio.currentTime / d, currentTime: audio.currentTime, duration: d });
       }
     };
     const onMeta = () => {
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
+        onProgressUpdate?.({ progress: currentTime / audio.duration, currentTime, duration: audio.duration });
       }
     };
     const onEnd = () => {
       // 单曲循环模式下也会触发；归零
       setCurrentTime(0);
       setProgress(0);
+      onProgressUpdate?.({ progress: 0, currentTime: 0, duration });
     };
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadedmetadata', onMeta);
@@ -285,15 +293,12 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
   useEffect(() => {
     setCurrentTime(0);
     setProgress(0);
+    onProgressUpdate?.({ progress: 0, currentTime: 0, duration });
     suppressUntilRef.current = 0;
   }, [idx, track.id]);
 
   /** 把进度条位置映射到 0~1，clamp 后回写到 audio + 本地 state */
-  const seekFromClientX = (clientX: number) => {
-    const bar = trackBarRef.current;
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const seekTo = (ratio: number) => {
     const audio = audioRef.current;
     if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
       // 用户拖动期间抑制原生 timeupdate，防止 thumb 抖动
@@ -302,10 +307,22 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
       setCurrentTime(audio.currentTime);
       setDuration(audio.duration);
       setProgress(ratio);
+      onProgressUpdate?.({ progress: ratio, currentTime: audio.currentTime, duration: audio.duration });
+      onSeek?.(ratio);
     } else {
       // 合成音轨 / 还没加载：仅更新视觉进度，不写音频
       setProgress(ratio);
+      onProgressUpdate?.({ progress: ratio, currentTime: ratio * duration, duration });
+      onSeek?.(ratio);
     }
+  };
+
+  const seekFromClientX = (clientX: number) => {
+    const bar = trackBarRef.current;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    seekTo(ratio);
   };
 
   const onTrackBarMouseDown = (e: React.MouseEvent) => {
@@ -351,6 +368,8 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  useImperativeHandle(_ref, () => ({ seekTo, togglePlay }), [seekTo]);
+
   return (
     <div className={`record-player ${playing ? 'is-playing' : ''}`} aria-label="氛围音乐播放器">
       <button
@@ -384,8 +403,8 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
         <div className="record-player__title" title={track.title}>
           {track.title}
         </div>
-        {/* 播放进度条：拖动 thumb 跳转 currentTime（仅在有真实 audio 时生效；合成音轨仅视觉） */}
-        <div className="record-player__track-bar-row">
+        {/* 进度条移到 DateHeader，此处仅保留 DOM 供拖动逻辑使用，视觉隐藏 */}
+        <div className="record-player__track-bar-row" hidden>
           <span className="record-player__track-time" aria-label="已播放时长">
             {fmt(currentTime)}
           </span>
@@ -465,4 +484,4 @@ export function RecordPlayer({ library = [], onTimeUpdate, onTrackChange, onCove
       {track.src && <audio ref={audioRef} hidden preload="auto" />}
     </div>
   );
-}
+});

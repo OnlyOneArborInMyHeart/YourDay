@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import './DateHeader.css';
 import { RecordPlayer } from './RecordPlayer';
 import {
@@ -33,25 +33,33 @@ interface Props {
   onCoverChange?: (coverUrl: string | null) => void;
   /** 歌词面板展开回调 */
   onToggleLyrics?: () => void;
+  /** 播放进度变化回调 */
+  onProgressUpdate?: (info: { progress: number; currentTime: number; duration: number }) => void;
 }
 
-export function DateHeader({
-  date,
-  onChange,
-  onAdd,
-  onOpenDecomposer,
-  onOpenDiary,
-  theme,
-  onThemeChange,
-  musicLibrary = [],
-  onTimeUpdate,
-  onTrackChange,
-  onCoverChange,
-  onToggleLyrics,
-}: Props) {
+export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void }, Props>(
+  (
+    {
+      date,
+      onChange,
+      onAdd,
+      onOpenDecomposer,
+      onOpenDiary,
+      theme,
+      onThemeChange,
+      musicLibrary = [],
+      onTimeUpdate,
+      onTrackChange,
+      onCoverChange,
+      onToggleLyrics,
+      onProgressUpdate,
+    },
+    ref,
+  ) => {
   const [editingTheme, setEditingTheme] = useState(false);
   const [themeDraft, setThemeDraft] = useState('');
   const themeInputRef = useRef<HTMLInputElement>(null);
+  const playerRef = useRef<{ seekTo: (ratio: number) => void }>(null);
 
   const lunar = getLunarInfo(date);
   const holiday = getHolidayInfo(date);
@@ -86,6 +94,8 @@ export function DateHeader({
     setEditingTheme(false);
   };
 
+  useImperativeHandle(ref, () => ({ seekTo: (ratio: number) => playerRef.current?.seekTo(ratio) }), []);
+
   return (
     <header className="date-header">
       {/* 左侧：唱片（上） + 日期导航（下） */}
@@ -93,10 +103,12 @@ export function DateHeader({
         {/* 黑胶唱片 + 歌词按钮 */}
         <div className="date-header__player-row">
           <RecordPlayer
+            ref={playerRef}
             library={musicLibrary}
             onTimeUpdate={onTimeUpdate}
             onTrackChange={onTrackChange}
             onCoverChange={onCoverChange}
+            onProgressUpdate={(info) => onProgressUpdate?.(info)}
           />
           <button
             type="button"
@@ -108,6 +120,7 @@ export function DateHeader({
             <span aria-hidden>♪</span>
           </button>
         </div>
+
         <div className="date-header__nav-row">
           <button
             className="icon-btn"
@@ -232,4 +245,4 @@ export function DateHeader({
       </div>
     </header>
   );
-}
+});

@@ -1,5 +1,5 @@
 import './App.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DateHeader } from './components/DateHeader';
 import { EventCalendar } from './components/EventCalendar';
 import { EventList } from './components/EventList';
@@ -59,6 +59,9 @@ export default function App() {
   // 设置弹窗（音乐库等）
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [musicLibrary, setMusicLibrary] = useState<MusicTrack[]>([]);
+  const [playProgress, setPlayProgress] = useState({ progress: 0, currentTime: 0, duration: 0 });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playerRef = useRef<{ seekTo: (ratio: number) => void; togglePlay: () => void }>(null);
 
   // 歌词抽屉状态
   const [lyricsVisible, setLyricsVisible] = useState(false);
@@ -66,6 +69,8 @@ export default function App() {
   const [lyricsCurrentTime, setLyricsCurrentTime] = useState(0);
   const [lyricsTrackTitle, setLyricsTrackTitle] = useState('');
   const [lyricsCoverUrl, setLyricsCoverUrl] = useState<string | null>(null);
+
+  // 底部进度条拖动
 
   // 启动时拉一次音乐库，让唱片播放器一进入就有用户曲目（如果库为空就 fallback 到默认合成曲）
   useEffect(() => {
@@ -451,6 +456,7 @@ export default function App() {
 
       {view === 'timeline' && (
         <DateHeader
+          ref={playerRef}
           date={date}
           onChange={setDate}
           onAdd={() => setModal({ kind: 'create' })}
@@ -463,6 +469,7 @@ export default function App() {
           onTrackChange={handleLyricsTrackChange}
           onCoverChange={setLyricsCoverUrl}
           onToggleLyrics={() => setLyricsVisible((v) => !v)}
+          onProgressUpdate={setPlayProgress}
         />
       )}
 
@@ -589,6 +596,13 @@ export default function App() {
           trackTitle={lyricsTrackTitle || '当前曲目'}
           coverUrl={lyricsCoverUrl}
           onClose={() => setLyricsVisible(false)}
+          playProgress={playProgress}
+          onSeek={(ratio) => playerRef.current?.seekTo(ratio)}
+          isPlaying={isPlaying}
+          onTogglePlay={() => {
+            playerRef.current?.togglePlay();
+            setIsPlaying((p) => !p);
+          }}
         />
       )}
     </div>

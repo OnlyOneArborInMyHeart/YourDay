@@ -10,9 +10,17 @@ interface Props {
   coverUrl: string | null;
   /** 关闭回调，由 App 层的 lyricsVisible state 控制 */
   onClose?: () => void;
+  /** 播放进度信息 */
+  playProgress?: { progress: number; currentTime: number; duration: number };
+  /** 拖动进度条时跳转（ratio 0-1） */
+  onSeek?: (ratio: number) => void;
+  /** 当前是否在播放 */
+  isPlaying?: boolean;
+  /** 切换播放/暂停 */
+  onTogglePlay?: () => void;
 }
 
-export function LyricsPanel({ lyrics, currentTime, trackTitle, coverUrl, onClose }: Props) {
+export function LyricsPanel({ lyrics, currentTime, trackTitle, coverUrl, onClose, playProgress, onSeek, isPlaying, onTogglePlay }: Props) {
   const prevIdx = useCallback(() => {
     if (!lyrics.length) return -1;
     let idx = 0;
@@ -40,12 +48,12 @@ export function LyricsPanel({ lyrics, currentTime, trackTitle, coverUrl, onClose
       if (lyrics[i].time <= currentTime) idx = i;
       else break;
     }
-    return Math.min(lyrics.length - 1, idx + 1);
+    return idx + 1;
   }, [lyrics, currentTime])();
 
-  const prevLine = prevIdx >= 0 ? lyrics[prevIdx] : null;
-  const curLine  = activeIdx >= 0 ? lyrics[activeIdx] : null;
-  const nextLine = nextIdx >= 0 ? lyrics[nextIdx] : null;
+  const prevLine = prevIdx >= 0 && prevIdx < lyrics.length ? lyrics[prevIdx] : null;
+  const curLine  = activeIdx >= 0 && activeIdx < lyrics.length ? lyrics[activeIdx] : null;
+  const nextLine = nextIdx >= 0 && nextIdx < lyrics.length ? lyrics[nextIdx] : null;
 
   const renderLine = (line: LyricLine | null, role: 'prev' | 'current' | 'next') => {
     if (!line) return null;
@@ -58,6 +66,13 @@ export function LyricsPanel({ lyrics, currentTime, trackTitle, coverUrl, onClose
         {text || '· · ·'}
       </div>
     );
+  };
+
+  const fmtTime = (s: number) => {
+    if (!Number.isFinite(s) || s < 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -90,6 +105,31 @@ export function LyricsPanel({ lyrics, currentTime, trackTitle, coverUrl, onClose
               {renderLine(prevLine, 'prev')}
               {renderLine(curLine, 'current')}
               {renderLine(nextLine, 'next')}
+              {/* 进度条 */}
+              {playProgress && (
+                <div className="lyrics-drawer__progress">
+                  <button
+                    type="button"
+                    className="lyrics-drawer__play-btn"
+                    onClick={onTogglePlay}
+                    aria-label={isPlaying ? '暂停' : '播放'}
+                  >
+                    {isPlaying ? '❚❚' : '▶'}
+                  </button>
+                  <span className="lyrics-drawer__time">{fmtTime(playProgress.currentTime)}</span>
+                  <div
+                    className="lyrics-drawer__bar"
+                    onMouseDown={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                      onSeek?.(ratio);
+                    }}
+                  >
+                    <div className="lyrics-drawer__bar-fill" style={{ width: `${playProgress.progress * 100}%` }} />
+                  </div>
+                  <span className="lyrics-drawer__time">{fmtTime(playProgress.duration)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
