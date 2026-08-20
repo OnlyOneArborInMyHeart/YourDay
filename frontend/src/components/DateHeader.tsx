@@ -37,29 +37,26 @@ interface Props {
   onProgressUpdate?: (info: { progress: number; currentTime: number; duration: number }) => void;
 }
 
-export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void }, Props>(
-  (
-    {
-      date,
-      onChange,
-      onAdd,
-      onOpenDecomposer,
-      onOpenDiary,
-      theme,
-      onThemeChange,
-      musicLibrary = [],
-      onTimeUpdate,
-      onTrackChange,
-      onCoverChange,
-      onToggleLyrics,
-      onProgressUpdate,
-    },
-    ref,
-  ) => {
+export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePlay: () => void }, Props>(
+  ({
+    date,
+    onChange,
+    onAdd,
+    onOpenDecomposer,
+    onOpenDiary,
+    theme,
+    onThemeChange,
+    musicLibrary,
+    onTimeUpdate,
+    onTrackChange,
+    onCoverChange,
+    onToggleLyrics,
+    onProgressUpdate,
+  }, ref) => {
   const [editingTheme, setEditingTheme] = useState(false);
   const [themeDraft, setThemeDraft] = useState('');
   const themeInputRef = useRef<HTMLInputElement>(null);
-  const playerRef = useRef<{ seekTo: (ratio: number) => void }>(null);
+  const playerRef = useRef<{ seekTo: (ratio: number) => void; togglePlay: () => void }>(null);
 
   const lunar = getLunarInfo(date);
   const holiday = getHolidayInfo(date);
@@ -94,7 +91,10 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void }, Props>
     setEditingTheme(false);
   };
 
-  useImperativeHandle(ref, () => ({ seekTo: (ratio: number) => playerRef.current?.seekTo(ratio) }), []);
+  useImperativeHandle(ref, () => ({
+    seekTo: (ratio: number) => playerRef.current?.seekTo(ratio),
+    togglePlay: () => playerRef.current?.togglePlay(),
+  }), []);
 
   return (
     <header className="date-header">

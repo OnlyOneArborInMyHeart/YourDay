@@ -152,7 +152,7 @@ interface Props {
   onSeek?: (ratio: number) => void;
 }
 
-export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void }, Props>(
+export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void; togglePlay: () => void }, Props>(
   ({ library = [], onTimeUpdate, onTrackChange, onCoverChange, onProgressUpdate, onSeek }, _ref) => {
     const tracks: Track[] = library.length > 0 ? tracksFromLibrary(library) : DEFAULT_TRACKS;
     const [idx, setIdx] = useState(0);
@@ -173,30 +173,40 @@ export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void }, Prop
 
   const track = tracks[Math.min(idx, tracks.length - 1)];
 
-  // 切歌时若正在播放，重启音频源
+  // 同步 playing 状态到 audio 元素或合成器
   useEffect(() => {
-    if (!playing) return;
     const audio = audioRef.current;
-    if (track.src && audio) {
-      audio.src = track.src;
-      audio.loop = true;
-      audio.volume = 0.6;
-      audio.play().catch(() => {
-        // 自动播放被浏览器阻止时不报错，让用户再点一次
-      });
+    if (playing) {
+      if (track.src && audio) {
+        if (!audio.src) audio.src = track.src;
+        audio.loop = true;
+        audio.volume = 0.6;
+        audio.play().catch(() => {});
+      } else {
+        playSynth(synthRef.current, track);
+      }
     } else {
-      playSynth(synthRef.current, track);
-    }
-    return () => {
-      if (track.src) {
-        audioRef.current?.pause();
+      if (track.src && audio) {
+        audio.pause();
       } else {
         stopPlayer(synthRef.current);
-        synthRef.current.audioCtx?.close().catch(() => {});
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, idx, track.id]);
+
+  // 页面切走时保持播放状态（浏览器会挂起 audio，需重新触发 play）
+  useEffect(() => {
+    if (!playing) return;
+    const onVisible = () => {
+      const audio = audioRef.current;
+      if (playing && track.src && audio && audio.src) {
+        audio.play().catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, track.id]);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [playing, track.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 切歌时通知父组件（用于歌词同步）
   useEffect(() => {
@@ -214,26 +224,9 @@ export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void }, Prop
     };
   }, []);
 
+  const togglePlayRef = useRef<() => void>(() => {});
   const togglePlay = () => {
-    const wasPlaying = playing;
     setPlaying((p) => !p);
-    const audio = audioRef.current;
-    if (wasPlaying) {
-      if (track.src && audio) {
-        audio.pause();
-      } else {
-        stopPlayer(synthRef.current);
-      }
-    } else {
-      if (track.src && audio) {
-        if (!audio.src) audio.src = track.src;
-        audio.loop = true;
-        audio.volume = 0.6;
-        audio.play().catch(() => {});
-      } else {
-        playSynth(synthRef.current, track);
-      }
-    }
   };
 
   const switchTrack = (dir: 1 | -1) => {
@@ -368,7 +361,10 @@ export const RecordPlayer = forwardRef<{ seekTo: (ratio: number) => void }, Prop
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  useImperativeHandle(_ref, () => ({ seekTo, togglePlay }), [seekTo]);
+  useEffect(() => {
+    togglePlayRef.current = togglePlay;
+  });
+  useImperativeHandle(_ref, () => ({ seekTo, togglePlay: () => togglePlayRef.current() }), [seekTo]);
 
   return (
     <div className={`record-player ${playing ? 'is-playing' : ''}`} aria-label="氛围音乐播放器">

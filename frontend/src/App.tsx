@@ -454,28 +454,26 @@ export default function App() {
         </div>
       </header>
 
-      {view === 'timeline' && (
-        <DateHeader
-          ref={playerRef}
-          date={date}
-          onChange={setDate}
-          onAdd={() => setModal({ kind: 'create' })}
-          onOpenDecomposer={() => setDecomposerOpen(true)}
-          onOpenDiary={() => setDiaryModalDate(date)}
-          theme={theme}
-          onThemeChange={(targetDate, title) => setThemeForDate(targetDate, title)}
-          musicLibrary={musicLibrary}
-          onTimeUpdate={handleLyricsTimeUpdate}
-          onTrackChange={handleLyricsTrackChange}
-          onCoverChange={setLyricsCoverUrl}
-          onToggleLyrics={() => setLyricsVisible((v) => !v)}
-          onProgressUpdate={setPlayProgress}
-        />
-      )}
+      <DateHeader
+        ref={playerRef}
+        date={date}
+        onChange={setDate}
+        onAdd={() => setModal({ kind: 'create' })}
+        onOpenDecomposer={() => setDecomposerOpen(true)}
+        onOpenDiary={() => setDiaryModalDate(date)}
+        theme={theme}
+        onThemeChange={(targetDate, title) => setThemeForDate(targetDate, title)}
+        musicLibrary={musicLibrary}
+        onTimeUpdate={handleLyricsTimeUpdate}
+        onTrackChange={handleLyricsTrackChange}
+        onCoverChange={setLyricsCoverUrl}
+        onToggleLyrics={() => setLyricsVisible((v) => !v)}
+        onProgressUpdate={setPlayProgress}
+      />
 
       {error && <div className="app-error">{error}</div>}
 
-      {view !== 'todos' && <Legend />}
+      <Legend />
 
       <div style={{ position: 'relative' }}>
         {loading && <div className="app-loading">加载中…</div>}
