@@ -27,6 +27,12 @@ export interface Event {
   background_image: EventBackground | null;
   /** 纯待办项（无具体时间），不展示在日历时间轴，只出现在 TodoList。 */
   isTodo: boolean;
+  /**
+   * 任务首次被跨日顺延前的原始日期（YYYY-MM-DD）。
+   * - 用户当天新建的任务：null
+   * - 被顺延过一次及以上的任务：写入并保持不变（用于显示"距今 X 天"）
+   */
+  original_date: string | null;
 }
 
 export type EventDraft = {

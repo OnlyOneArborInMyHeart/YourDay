@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
+import { carryOverTickIfNewDay } from '../carryover.js';
 
 const router = Router();
 
@@ -87,6 +88,9 @@ function decorateWithBackground(row) {
 
 router.get('/', (req, res) => {
   const { date, from, to } = req.query;
+
+  // 顺手做一次跨日顺延（每天首次请求 events 时执行一次；同一天不会重复跑）
+  carryOverTickIfNewDay();
 
   let rows;
   if (date) {

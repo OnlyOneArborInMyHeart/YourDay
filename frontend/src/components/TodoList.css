@@ -341,6 +341,31 @@
     vertical-align: middle;
 }
 
+/* 跨日顺延徽章：「距今 X 天」—— 紧贴标题，颜色随天数渐深 */
+.todo-item__carry-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.todo-item__carry-badge--fresh {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+.todo-item__carry-badge--aged {
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
+}
+.todo-item__carry-badge--stale {
+    background: rgba(220, 38, 38, 0.14);
+    color: #b91c1c;
+}
+
 /* —— 添加表单 —— */
 .todo-list__add-form {
     padding: 10px 10px 12px;

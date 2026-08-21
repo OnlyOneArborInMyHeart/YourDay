@@ -72,6 +72,10 @@ if (cols.some((c) => c.name === 'start_time' && c.notnull === 1)) {
 if (!db.prepare("PRAGMA table_info(events)").all().some((c) => c.name === 'is_todo')) {
   db.exec("ALTER TABLE events ADD COLUMN is_todo INTEGER NOT NULL DEFAULT 0");
 }
+// 兼容旧库：若 events 表没有 original_date 列（任务首次顺延前的原始日期），补充之
+if (!db.prepare("PRAGMA table_info(events)").all().some((c) => c.name === 'original_date')) {
+  db.exec("ALTER TABLE events ADD COLUMN original_date TEXT DEFAULT NULL");
+}
 // 兼容旧库：若 events 表的 id 不是 INTEGER PRIMARY KEY（即之前 migration 漏了），重建之
 const idCol = db.prepare("PRAGMA table_info(events)").all().find((c) => c.name === 'id');
 if (idCol && idCol.type !== 'INTEGER') {

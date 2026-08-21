@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Event } from '../types';
 import { eventsApi } from '../api/events';
-import { durationMinutes, formatCompletedLabel } from '../utils/date';
+import { daysBetween, durationMinutes, formatCompletedLabel, toDateString } from '../utils/date';
 import './TodoList.css';
 
 interface Props {
@@ -12,6 +12,19 @@ interface Props {
   onAdded: () => void;
   /** 当前展示的日期（用于默认时间） */
   date: string;
+}
+
+/**
+ * 根据"距今 X 天"算出徽章颜色等级（颜色随天数加深）。
+ * - 1-2 天：fresh（柔和蓝）
+ * - 3-6 天：aged（琥珀）
+ * - 7+  天：stale（警示红）
+ */
+function carryBadgeLevel(originalDate: string): 'fresh' | 'aged' | 'stale' {
+  const diff = Math.max(0, daysBetween(toDateString(new Date()), originalDate));
+  if (diff <= 2) return 'fresh';
+  if (diff <= 6) return 'aged';
+  return 'stale';
 }
 
 export function TodoList({ events, onToggleDone, onSelectEvent, onAdded, date }: Props) {
@@ -212,6 +225,14 @@ function TodoItem({
         <div className="todo-item__title">
           {event.isTodo && <span className="todo-item__todo-badge">待办</span>}
           {event.title}
+          {event.original_date && (
+            <span
+              className={`todo-item__carry-badge todo-item__carry-badge--${carryBadgeLevel(event.original_date)}`}
+              title={`原定日期：${event.original_date}`}
+            >
+              距今 {daysBetween(toDateString(new Date()), event.original_date)} 天
+            </span>
+          )}
         </div>
         {event.note && <div className="todo-item__note">{event.note}</div>}
         {event.completed_at && (

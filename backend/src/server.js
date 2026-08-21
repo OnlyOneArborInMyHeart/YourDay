@@ -10,6 +10,7 @@ import diariesRouter from './routes/diaries.js';
 import uploadsRouter from './routes/uploads.js';
 import eventBackgroundsRouter from './routes/eventBackgrounds.js';
 import musicRouter from './routes/music.js';
+import { startCarryOverScheduler, runCarryOverNow } from './carryover.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,4 +78,8 @@ app.use((err, _req, res, _next) => {
 
 app.listen(PORT, () => {
   console.log(`YourDay API 已启动 → http://localhost:${PORT}`);
+  // 启动时立即跑一次跨日顺延（兜底：服务器刚启动就跨了多天）
+  runCarryOverNow('startup');
+  // 启动每日 0 点的定时任务
+  startCarryOverScheduler();
 });
