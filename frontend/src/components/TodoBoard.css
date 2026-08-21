@@ -547,6 +547,19 @@
   background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
 }
 
+/* —— 父项已完成：子项不可编辑（锁定）—— */
+.todo-row.is-locked {
+  opacity: 0.7;
+}
+.todo-row.is-locked .todo-row__check,
+.todo-row.is-locked .todo-row__actions .icon-btn {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.todo-row.is-locked .todo-row__actions .icon-btn:hover {
+  color: inherit;
+}
+
 .todo-row--sub {
   margin-left: 28px;
   background: var(--color-bg-elev);

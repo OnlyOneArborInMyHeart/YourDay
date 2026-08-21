@@ -98,18 +98,36 @@ export function BatchExportDialog({ open, anchorDate, knownDiaries, themeCache, 
     return t ? `${date}_${t}.md` : `${date}.md`;
   };
 
-  const buildMarkdown = (diary: Diary, theme: string) => {
-    const title = theme.trim() || diary.title?.trim() || '';
-    const front = [
-      '---',
-      `date: ${diary.date}`,
-      title ? `title: ${title}` : '',
-      '---',
-      '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    return front + (diary.markdown_content || '');
+  /**
+   * 清理 markdown 开头残留的"日记元数据"片段。
+   *
+   * 历史原因：DiaryModal 的单日"导出"按钮曾拼 `---\ndate: ...\n---\n` 头，再
+   * 经过手工复制/粘贴/导入后可能会以这些形式残留在 markdown_content 开头：
+   *   - 合法的 YAML front matter 块：`---\n...\n---\n`
+   *   - 只剩 `date:` / `title:` 行（被手动删了包裹的 `---`）
+   *   - 只剩单独一行 `---`（水平线）
+   *   - `---` 直接粘在第一行内容前（如 `---### 第二次测试`）
+   *
+   * 用户期望的"导出文件 = 网站 textarea 原文"里没有这些，按需求全部剥掉。
+   */
+  const stripFrontmatter = (text: string): string => {
+    let result = text;
+    // 1) 合法 YAML front matter
+    result = result.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+    // 2) 开头连续的 `---` / `date:` / `title:` 整行（每行可带尾随空白）
+    result = result.replace(
+      /^(?:[ \t]*(?:---[ \t]*|date:[^\n]*|title:[^\n]*)[ \t]*\r?\n)+/,
+      ''
+    );
+    // 3) 紧贴第一行内容前的 `---` 前缀（可能被错位粘到正文行首）
+    result = result.replace(/^---+\s*/, '');
+    return result;
+  };
+
+  const buildMarkdown = (diary: Diary) => {
+    // 按需求：导出文件 = 用户在编辑器 textarea 中看到的原文。
+    // 不附加 front matter / 日期行 / 任何额外形式。
+    return stripFrontmatter(diary.markdown_content || '');
   };
 
   const exportOne = async () => {
@@ -136,7 +154,7 @@ export function BatchExportDialog({ open, anchorDate, knownDiaries, themeCache, 
           const name = safeFilename(diary.date, theme);
           const fileHandle = await folder.getFileHandle(name, { create: true });
           const writable = await fileHandle.createWritable();
-          await writable.write(new Blob([buildMarkdown(diary, theme)], { type: 'text/markdown;charset=utf-8' }));
+          await writable.write(new Blob([buildMarkdown(diary)], { type: 'text/markdown;charset=utf-8' }));
           await writable.close();
         }
       } else {
@@ -146,7 +164,7 @@ export function BatchExportDialog({ open, anchorDate, knownDiaries, themeCache, 
         for (const diary of list) {
           const theme = themeCache[diary.date] ?? '';
           const name = safeFilename(diary.date, theme);
-          zip.file(name, buildMarkdown(diary, theme));
+          zip.file(name, buildMarkdown(diary));
         }
         const blob = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(blob);

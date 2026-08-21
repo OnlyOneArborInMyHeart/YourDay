@@ -176,16 +176,8 @@ export function DiaryModal({ open, date, diary: initDiary, theme, onThemeChange,
   };
 
   const exportMarkdown = async () => {
-    const frontmatter = [
-      '---',
-      `date: ${date}`,
-      titleDraft ? `title: ${titleDraft}` : '',
-      '---',
-      '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const blob = new Blob([frontmatter + content], { type: 'text/markdown;charset=utf-8' });
+    // 不再附加 front matter / 日期行 / 任何额外形式：导出文件内容 = 当前编辑器内 markdown 原文。
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
     const safeTitle = titleDraft.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 40);
     const fileName = safeTitle ? `${date}_${safeTitle}.md` : `${date}.md`;
 

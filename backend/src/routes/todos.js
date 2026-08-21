@@ -143,15 +143,21 @@ function validateTodoBody(body, partial = false) {
       if (!Number.isInteger(pid) || pid <= 0) {
         errors.push('parent_id 应为正整数或 null');
       } else {
-        // 校验：父 todo 必须存在，且自身必须是顶级（parent_id IS NULL）。
-        // 防止二级以上嵌套，并且防止指向自己。
-        const parent = db.prepare('SELECT id, parent_id FROM todos WHERE id = ?').get(pid);
-        if (!parent) {
-          errors.push('parent_id 引用的父 todo 不存在');
-        } else if (parent.parent_id != null) {
-          errors.push('parent_id 必须是顶级 todo（不允许孙代）');
-        }
-        value.parent_id = pid;
+// 校验：父 todo 必须存在、自身必须是顶级（parent_id IS NULL），且尚未完成。
+      // - 防止二级以上嵌套
+      // - 防止指向自己
+      // - 已完成的父 todo 不允许再添加/迁移子项（业务规则：父项完成后冻结子项）
+      const parent = db
+        .prepare('SELECT id, parent_id, done FROM todos WHERE id = ?')
+        .get(pid);
+      if (!parent) {
+        errors.push('parent_id 引用的父 todo 不存在');
+      } else if (parent.parent_id != null) {
+        errors.push('parent_id 必须是顶级 todo（不允许孙代）');
+      } else if (parent.done) {
+        errors.push('已完成的事项不能再添加/挂入子待做');
+      }
+      value.parent_id = pid;
       }
     }
   } else if (!partial) {

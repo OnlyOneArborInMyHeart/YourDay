@@ -613,6 +613,7 @@ function TodoRow({
   subToggle,
   subCount,
   subProgress,
+  locked,
 }: {
   todo: Todo;
   today: string;
@@ -629,6 +630,8 @@ function TodoRow({
   subCount?: number;
   /** 顶级 todo 的子项完成进度（仅当 subCount > 0 时使用）。 */
   subProgress?: { done: number; total: number };
+  /** 父项已 done 时禁用子项的操作：勾选/编辑/删除全部不可点。 */
+  locked?: boolean;
 }) {
   const overdue = isOverdue(todo.due_date, today) && !todo.done;
   const showProgress =
@@ -641,7 +644,7 @@ function TodoRow({
     <li
       className={`todo-row todo-row--p${todo.priority} ${todo.done ? 'is-done' : ''} ${
         isSub ? 'todo-row--sub' : ''
-      } ${showProgress ? 'has-sub-progress' : ''}`}
+      } ${showProgress ? 'has-sub-progress' : ''} ${locked ? 'is-locked' : ''}`}
     >
       <button
         type="button"
@@ -649,6 +652,7 @@ function TodoRow({
         aria-pressed={todo.done}
         aria-label={todo.done ? '标记为未完成' : '标记为已完成'}
         onClick={() => onToggle(!todo.done)}
+        disabled={locked}
       >
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
           <path
@@ -760,14 +764,21 @@ function TodoRow({
             拆到今天 →
           </button>
         )}
-        <button className="icon-btn" onClick={onEdit} aria-label="编辑" title="编辑">
+        <button
+          className="icon-btn"
+          onClick={onEdit}
+          aria-label="编辑"
+          title={locked ? '父项已完成，无法编辑' : '编辑'}
+          disabled={locked}
+        >
           ✎
         </button>
         <button
           className="icon-btn icon-btn--danger"
           onClick={onDelete}
           aria-label="删除"
-          title="删除"
+          title={locked ? '父项已完成，无法删除' : '删除'}
+          disabled={locked}
         >
           🗑
         </button>
@@ -895,11 +906,12 @@ function TodoGroup({
                 /* 子项不展示「拆到今天」 */
               }}
               isSub
+              locked={parent.done}
             />
           )
         )}
 
-      {expanded && editingId !== parent.id && (
+      {expanded && editingId !== parent.id && !parent.done && (
         <li className="todo-row todo-row--sub todo-row--add-sub">
           <span className="todo-row__sub-arrow" aria-hidden>
             ↳
