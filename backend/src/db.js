@@ -136,6 +136,15 @@ if (!todoCols.some((c) => c.name === 'completed_at')) {
   db.exec("ALTER TABLE todos ADD COLUMN completed_at TEXT DEFAULT NULL");
 }
 
+// 子待做（树状结构）：parent_id 指向父 todo 的 id；null/0 表示顶级。
+// 仅二级嵌套（不允许 parent_id 再有非 null parent_id 链），在前端校验。
+if (!todoCols.some((c) => c.name === 'parent_id')) {
+  db.exec("ALTER TABLE todos ADD COLUMN parent_id INTEGER DEFAULT NULL");
+}
+if (!todoCols.some((c) => c.name === 'parent_id_idx')) {
+  db.exec("CREATE INDEX IF NOT EXISTS idx_todos_parent ON todos(parent_id)");
+}
+
 // todo 备注内嵌图片：每张图独立存储，通过 note 中的 markdown token `![todo-img:N]()`
 // 引用。一个 todo 可引用多张，跨 todo 也可复用同一张（仅由前端去重 / 复用）。
 db.exec(`

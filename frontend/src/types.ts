@@ -70,6 +70,11 @@ export interface Todo {
   /** 首次完成的时间，done=false 时为 null。 */
   completed_at: string | null;
   /**
+   * 父 todo 的 id；null = 顶级。
+   * 目前限制二级嵌套，不允许"父项本身也是另一项的子项"。
+   */
+  parent_id: number | null;
+  /**
    * note 中实际引用的图片元数据（按 note 中的出现顺序）。
    * 通过 `![todo-img:ID](caption)` 这样的 markdown token 嵌入 note。
    */
@@ -93,6 +98,8 @@ export type TodoDraft = {
   priority: Priority;
   note?: string;
   due_date?: string | null;
+  /** 新建子待做时填父项 id；省略/null 则为顶级。 */
+  parent_id?: number | null;
 };
 
 /** 更新 todo 的请求体（任意子集） */
@@ -102,6 +109,7 @@ export type TodoPatch = Partial<{
   note: string;
   done: boolean;
   due_date: string | null;
+  parent_id: number | null;
 }>;
 
 /** 拆解：把一个 todo 转成 event draft，附带 todo id 方便追溯（可选） */

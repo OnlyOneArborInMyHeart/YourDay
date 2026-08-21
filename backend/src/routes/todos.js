@@ -68,6 +68,7 @@ function rowToTodo(row) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     completed_at: row.completed_at ?? null,
+    parent_id: row.parent_id ?? null,
   };
   // 优化：用单独函数注入 note_images
   base._noteImgIds = noteImages;
@@ -134,6 +135,29 @@ function validateTodoBody(body, partial = false) {
     value.due_date = null;
   }
 
+  if (body.parent_id !== undefined) {
+    if (body.parent_id === null || body.parent_id === 0 || body.parent_id === '') {
+      value.parent_id = null;
+    } else {
+      const pid = Number(body.parent_id);
+      if (!Number.isInteger(pid) || pid <= 0) {
+        errors.push('parent_id 应为正整数或 null');
+      } else {
+        // 校验：父 todo 必须存在，且自身必须是顶级（parent_id IS NULL）。
+        // 防止二级以上嵌套，并且防止指向自己。
+        const parent = db.prepare('SELECT id, parent_id FROM todos WHERE id = ?').get(pid);
+        if (!parent) {
+          errors.push('parent_id 引用的父 todo 不存在');
+        } else if (parent.parent_id != null) {
+          errors.push('parent_id 必须是顶级 todo（不允许孙代）');
+        }
+        value.parent_id = pid;
+      }
+    }
+  } else if (!partial) {
+    value.parent_id = null;
+  }
+
   return { errors, value };
 }
 
@@ -185,8 +209,8 @@ router.post('/', (req, res) => {
   if (errors.length) return res.status(400).json({ error: errors.join('；') });
 
   const stmt = db.prepare(`
-    INSERT INTO todos (title, priority, note, done, due_date)
-    VALUES (@title, @priority, @note, @done, @due_date)
+    INSERT INTO todos (title, priority, note, done, due_date, parent_id)
+    VALUES (@title, @priority, @note, @done, @due_date, @parent_id)
   `);
   const result = stmt.run(value);
   const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(result.lastInsertRowid);
@@ -207,6 +231,7 @@ router.put('/:id', (req, res) => {
     note: value.note ?? existing.note,
     done: value.done ?? existing.done,
     due_date: value.due_date !== undefined ? value.due_date : existing.due_date,
+    parent_id: value.parent_id !== undefined ? value.parent_id : existing.parent_id,
   };
 
   // completed_at 自动维护：
@@ -225,7 +250,7 @@ router.put('/:id', (req, res) => {
   db.prepare(`
     UPDATE todos
     SET title=@title, priority=@priority, note=@note,
-        done=@done, due_date=@due_date,
+        done=@done, due_date=@due_date, parent_id=@parent_id,
         completed_at=${completedAtExpr},
         updated_at=datetime('now','localtime')
     WHERE id=@id
@@ -289,6 +314,38 @@ router.patch('/:id/toggle', (req, res) => {
   db.prepare(
     `UPDATE todos SET done=?, completed_at=${completedAtExpr}, updated_at=datetime('now','localtime') WHERE id=?`
   ).run(next, req.params.id);
+
+  // 父项联动（仅当被切换的是子项时检查）：
+  // - 子项切到 done 后，若所有兄弟都 done → 把父项标 done
+  // - 子项切到 not done → 若父项当前 done，把父项标 not done
+  // 单项 done 状态被解锁/重锁都同步刷新 completed_at。
+  if (existing.parent_id != null) {
+    const parentId = existing.parent_id;
+    const sibStats = db
+      .prepare(
+        `SELECT
+            SUM(CASE WHEN done=1 THEN 1 ELSE 0 END) AS doneCount,
+            COUNT(*) AS total
+         FROM todos WHERE parent_id = ?`
+      )
+      .get(parentId);
+    const total = sibStats?.total ?? 0;
+    const doneCount = sibStats?.doneCount ?? 0;
+
+    let parentShouldDone = null; // 不变 / true / false
+    if (total > 0 && doneCount === total) parentShouldDone = true;
+    else if (next === 0) parentShouldDone = false;
+
+    const parentNow = db.prepare('SELECT done, completed_at FROM todos WHERE id=?').get(parentId);
+    if (parentNow && parentShouldDone !== null && !!parentNow.done !== parentShouldDone) {
+      const parentExpr = parentShouldDone
+        ? "datetime('now','localtime')"
+        : 'NULL';
+      db.prepare(
+        `UPDATE todos SET done=?, completed_at=${parentExpr}, updated_at=datetime('now','localtime') WHERE id=?`
+      ).run(parentShouldDone ? 1 : 0, parentId);
+    }
+  }
 
   const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
   res.json(withNoteImages(rowToTodo(row)));
