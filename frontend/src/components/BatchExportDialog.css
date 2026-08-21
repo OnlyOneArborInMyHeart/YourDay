@@ -1,0 +1,164 @@
+.modal--batch-export {
+  width: min(720px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal--batch-export .modal__body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 0;
+  gap: 12px;
+}
+
+.modal--batch-export .modal__footer {
+  margin-top: 0;
+  padding-top: 12px;
+  padding-bottom: 14px;
+}
+
+.batch-export__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.batch-export__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.batch-export__controls {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px 14px;
+  padding: 12px 14px;
+  background: #fafbfc;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+}
+
+.batch-export__controls > label {
+  flex-shrink: 0;
+}
+
+.batch-export__controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #555;
+  font-size: 13px;
+}
+
+.batch-export__controls input[type='date'] {
+  border: 1px solid #d8d8d8;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+.batch-export__controls input[type='date']:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.batch-export__count {
+  margin-left: auto;
+  color: #666;
+  font-size: 13px;
+  padding: 4px 10px;
+  background: #f0f4fa;
+  border-radius: 12px;
+}
+
+.batch-export__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+  padding: 32px 0;
+}
+
+.batch-export__list {
+  flex: 1;
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #ececec;
+  border-radius: 6px;
+  overflow-y: auto;
+}
+
+.batch-export__item {
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.batch-export__item:last-child {
+  border-bottom: none;
+}
+
+.batch-export__item.is-checked {
+  background: #f6faff;
+}
+
+.batch-export__item label {
+  display: grid;
+  grid-template-columns: auto 110px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.batch-export__item input[type='checkbox'] {
+  cursor: pointer;
+}
+
+.batch-export__item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.batch-export__item-label {
+  font-size: 11px;
+  color: #999;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.batch-export__item-date {
+  font-weight: 600;
+  color: #333;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.batch-export__item-theme {
+  color: #444;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-export__progress {
+  font-size: 13px;
+  color: #4a90e2;
+  margin-right: 16px;
+  font-weight: 500;
+}

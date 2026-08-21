@@ -99,10 +99,31 @@
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 
+.field__input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: 12px;
+  align-items: end;
+}
+
+.field--check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+
+.field__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .priority-group {
@@ -169,14 +190,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.modal__footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modal__footer-right {
   display: flex;
-  gap: 8px;
-  margin-left: auto;
+  align-items: center;
+  gap: 10px;
 }
 
 .danger-btn {

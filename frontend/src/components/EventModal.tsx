@@ -48,6 +48,7 @@ export function EventModal({
   const [end, setEnd] = useState('10:00');
   const [priority, setPriority] = useState<Priority>(2);
   const [note, setNote] = useState('');
+  const [isTodo, setIsTodo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -77,11 +78,12 @@ export function EventModal({
     setCropSrc(null);
     if (initial) {
       setTitle(initial.title);
-      setStart(initial.start_time);
-      setEnd(initial.end_time);
+      setStart(initial.start_time ?? '09:00');
+      setEnd(initial.end_time ?? '10:00');
       setPriority(initial.priority);
       setNote(initial.note || '');
       setBackground(initial.background_image || null);
+      setIsTodo(initial.isTodo);
     } else if (prefill) {
       const startMin = defaultStartMinutes ?? 9 * 60;
       const s = minutesToTime(startMin);
@@ -100,6 +102,7 @@ export function EventModal({
       setPriority(2);
       setNote('');
       setBackground(null);
+      setIsTodo(false);
     }
   }, [open, initial, defaultStartMinutes, prefill]);
 
@@ -129,30 +132,29 @@ export function EventModal({
       setError('请填写事项名称');
       return;
     }
-    if (timeToMinutes(start) >= timeToMinutes(end)) {
+    if (!isTodo && timeToMinutes(start) >= timeToMinutes(end)) {
       setError('开始时间必须早于结束时间');
       return;
     }
     setSubmitting(true);
     try {
-      const draft: EventDraft = {
+      const draft: Record<string, unknown> = {
         date,
         title: title.trim(),
-        start_time: start,
-        end_time: end,
         priority,
         note: note.trim(),
+        isTodo,
       };
-      // 背景图语义：
-      // - 有 background + 没 pendingRemove → 传 background.id
-      // - pendingRemove → 显式传 null，让后端清空关联
-      // - 没有 background 且没 pendingRemove → 不传 background_image_id（保持不变或首次创建时为 null）
+      if (!isTodo) {
+        draft.start_time = start;
+        draft.end_time = end;
+      }
       if (background && !pendingRemove) {
         draft.background_image_id = background.id;
       } else if (pendingRemove && initial?.background_image) {
         draft.background_image_id = null;
       }
-      await onSubmit(draft);
+      await onSubmit(draft as Parameters<typeof onSubmit>[0]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败');
@@ -277,6 +279,7 @@ export function EventModal({
                 type="time"
                 step={900}
                 value={start}
+                disabled={isTodo}
                 onChange={(e) => handleStartChange(e.target.value)}
               />
             </label>
@@ -287,8 +290,18 @@ export function EventModal({
                 type="time"
                 step={900}
                 value={end}
+                disabled={isTodo}
                 onChange={(e) => setEnd(e.target.value)}
               />
+            </label>
+            <label className="field field--check">
+              <input
+                type="checkbox"
+                className="field__checkbox"
+                checked={isTodo}
+                onChange={(e) => setIsTodo(e.target.checked)}
+              />
+              <span className="field__label">无时间</span>
             </label>
           </div>
 

@@ -11,6 +11,7 @@
   "dependencies": {
     "cropperjs": "^1.6.2",
     "dompurify": "^3.4.13",
+    "jszip": "^3.10.1",
     "lunar-typescript": "^1.8.6",
     "marked": "^15.0.12",
     "node-emoji": "^2.2.0",

@@ -14,8 +14,8 @@ export interface Event {
   id: number;
   date: string;
   title: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
   priority: Priority;
   note: string;
   done: boolean;
@@ -25,6 +25,8 @@ export interface Event {
   completed_at: string | null;
   /** 事件自定义背景图（可选）。 */
   background_image: EventBackground | null;
+  /** 纯待办项（无具体时间），不展示在日历时间轴，只出现在 TodoList。 */
+  isTodo: boolean;
 }
 
 export type EventDraft = {
@@ -36,6 +38,8 @@ export type EventDraft = {
   note: string;
   /** 设置背景图时传 id；清除背景传 null；省略则不变。 */
   background_image_id?: number | null;
+  /** 纯待办项，不记具体时间。 */
+  isTodo?: boolean;
 };
 
 /** 用于部分更新的事件字段（done 切换 / 单字段编辑） */

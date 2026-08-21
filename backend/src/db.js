@@ -20,8 +20,8 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT NOT NULL,
     title TEXT NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT NOT NULL,
+    start_time TEXT,
+    end_time TEXT,
     priority INTEGER NOT NULL DEFAULT 3,
     note TEXT DEFAULT '',
     done INTEGER NOT NULL DEFAULT 0,
@@ -43,6 +43,60 @@ if (!cols.some((c) => c.name === 'completed_at')) {
 // 兼容旧库：若 events 表没有 background_image_id 列（事件背景图），补充之
 if (!cols.some((c) => c.name === 'background_image_id')) {
   db.exec("ALTER TABLE events ADD COLUMN background_image_id INTEGER DEFAULT NULL");
+}
+// 兼容旧库：若 events 表的 start_time/end_time 是 NOT NULL，改为可空
+if (cols.some((c) => c.name === 'start_time' && c.notnull === 1)) {
+  db.exec("CREATE TABLE IF NOT EXISTS events_backup AS SELECT * FROM events");
+  db.exec("DROP TABLE events");
+  db.exec(`
+    CREATE TABLE events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      start_time TEXT,
+      end_time TEXT,
+      priority INTEGER NOT NULL DEFAULT 3,
+      note TEXT DEFAULT '',
+      done INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      background_image_id INTEGER
+    )
+  `);
+  db.exec("INSERT INTO events SELECT id,date,title,start_time,end_time,priority,note,done,created_at,updated_at,completed_at,background_image_id,0 FROM events_backup");
+  db.exec("DROP TABLE events_backup");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)");
+}
+// 兼容旧库：若 events 表没有 is_todo 列（纯待办事项，不记时间），补充之
+if (!db.prepare("PRAGMA table_info(events)").all().some((c) => c.name === 'is_todo')) {
+  db.exec("ALTER TABLE events ADD COLUMN is_todo INTEGER NOT NULL DEFAULT 0");
+}
+// 兼容旧库：若 events 表的 id 不是 INTEGER PRIMARY KEY（即之前 migration 漏了），重建之
+const idCol = db.prepare("PRAGMA table_info(events)").all().find((c) => c.name === 'id');
+if (idCol && idCol.type !== 'INTEGER') {
+  db.exec("CREATE TABLE IF NOT EXISTS events_backup AS SELECT * FROM events");
+  db.exec("DROP TABLE events");
+  db.exec(`
+    CREATE TABLE events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      start_time TEXT,
+      end_time TEXT,
+      priority INTEGER NOT NULL DEFAULT 3,
+      note TEXT DEFAULT '',
+      done INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      background_image_id INTEGER,
+      is_todo INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+  db.exec("INSERT INTO events SELECT id,date,title,start_time,end_time,priority,note,done,created_at,updated_at,completed_at,background_image_id,COALESCE(is_todo,0) FROM events_backup");
+  db.exec("DROP TABLE events_backup");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)");
 }
 
 // 每日的自定义主题名（如"项目 A 启动日"）：一行 = 一天

@@ -113,7 +113,7 @@ export function EventList({
           <DayPanel
             key={d}
             date={d}
-            events={eventsByDate[d] || []}
+            events={(eventsByDate[d] || []).filter((e) => !e.isTodo)}
             isActive={d === date}
             isToday={d === today}
             sortMode={sortMode}
@@ -143,10 +143,10 @@ function DayPanel({ date, events, isActive, isToday, sortMode, onSelectEvent, on
       // P1 → P2 → P3，同优先级内按时间顺序
       list.sort((a, b) => {
         if (a.priority !== b.priority) return a.priority - b.priority;
-        return a.start_time.localeCompare(b.start_time);
+        return (a.start_time ?? '').localeCompare(b.start_time ?? '');
       });
     } else {
-      list.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      list.sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
     }
     return list;
   }, [events, sortMode]);
@@ -192,7 +192,8 @@ interface EventCardProps {
 }
 
 function EventCard({ event, onClick, onToggleDone }: EventCardProps) {
-  const dur = durationMinutes(event.start_time, event.end_time);
+  // EventList 传给 EventCard 的都是非 isTodo 项，start_time/end_time 不为 null
+  const dur = durationMinutes(event.start_time as string, event.end_time as string);
   // 直接由点击驱动，避免受 effect 时机或外部重挂影响
   const [burstKey, setBurstKey] = useState(0);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Priority, Todo, TodoDraft, TodoPatch } from '../types';
 import { todosApi, type TodoListQuery } from '../api/todos';
 import { toDateString } from '../utils/date';
@@ -54,6 +54,22 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
 
   // 待删确认
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  // 双击区域空白打开 composer
+  const boardRef = useRef<HTMLElement>(null);
+  const handleBoardDoubleClick = (e: React.MouseEvent) => {
+    if (composerOpen) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('.todo-composer') ||
+      target.closest('.todo-board__head') ||
+      target.closest('.todo-row') ||
+      target.closest('.todo-board__done')
+    )
+      return;
+    setComposer(EMPTY_DRAFT());
+    setComposerOpen(true);
+  };
 
   // 构造 API 查询参数
   const query = useMemo<TodoListQuery>(() => {
@@ -190,7 +206,12 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
   };
 
   return (
-    <section className="todo-board" aria-label="总体待做">
+    <section
+      className="todo-board"
+      aria-label="总体待做"
+      ref={boardRef}
+      onDoubleClick={handleBoardDoubleClick}
+    >
       <header className="todo-board__head">
         <div className="todo-board__title-row">
           <h2 className="todo-board__title">总体待做</h2>
@@ -300,33 +321,6 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
                 }
               }}
             />
-            <div className="todo-composer__row">
-              <div className="todo-composer__prio">
-                {PRIORITY_OPTIONS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`priority-chip priority-chip--p${p} ${
-                      composer.priority === p ? 'is-active' : ''
-                    }`}
-                    onClick={() => setComposer((c) => ({ ...c, priority: p }))}
-                  >
-                    P{p}
-                  </button>
-                ))}
-              </div>
-              <label className="todo-composer__due">
-                <span>截止日</span>
-                <input
-                  type="date"
-                  className="field__input"
-                  value={composer.due_date ?? ''}
-                  onChange={(e) =>
-                    setComposer((c) => ({ ...c, due_date: e.target.value || null }))
-                  }
-                />
-              </label>
-            </div>
             <textarea
               className="field__input field__textarea"
               placeholder="备注（可选）"
@@ -334,6 +328,12 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
               maxLength={500}
               value={composer.note}
               onChange={(e) => setComposer((c) => ({ ...c, note: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setComposerOpen(false);
+                  setComposer(EMPTY_DRAFT());
+                }
+              }}
             />
             <div className="todo-composer__actions">
               <button

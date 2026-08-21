@@ -31,6 +31,28 @@
     color: var(--color-text-soft);
 }
 
+.todo-list__add-btn {
+    margin-left: auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.12s;
+}
+.todo-list__add-btn:hover {
+    background: var(--color-primary-dark);
+    transform: scale(1.1);
+}
+
 .todo-list__items {
     flex: 1;
     list-style: none;
@@ -292,3 +314,109 @@
     border-color: var(--color-text-soft);
     color: var(--color-bg);
 }
+
+/* 纯待办项样式 */
+.todo-item.is-todo {
+    border-left: 3px solid var(--color-primary);
+}
+.todo-item.is-todo .todo-item__body {
+    opacity: 1;
+}
+.todo-item.is-todo .todo-item__title {
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.todo-item__todo-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    margin-right: 6px;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}
+
+/* —— 添加表单 —— */
+.todo-list__add-form {
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.todo-list__add-title {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-elev);
+    color: var(--color-text);
+    font-size: 13.5px;
+    font-weight: 500;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+.todo-list__add-title:focus {
+    border-color: var(--color-primary);
+}
+
+.todo-list__add-note {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-elev);
+    color: var(--color-text);
+    font-size: 12.5px;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+.todo-list__add-note:focus {
+    border-color: var(--color-primary);
+}
+
+.todo-list__add-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* 通用按钮（来自 EventModal.css 的副本） */
+.ghost-btn {
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-soft);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.ghost-btn:hover { background: var(--color-bg-soft); color: var(--color-text); }
+.ghost-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ghost-btn--sm { padding: 4px 12px; font-size: 12px; }
+
+.primary-btn {
+    padding: 6px 18px;
+    border-radius: 8px;
+    border: none;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.12s;
+}
+.primary-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.primary-btn--sm { padding: 5px 14px; font-size: 12px; }

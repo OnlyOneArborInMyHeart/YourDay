@@ -7,16 +7,19 @@ const VALID_PRIORITIES = [1, 2, 3];
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function validateEventBody(body) {
-  const { title, start_time, end_time, priority, note, done, background_image_id } = body;
+  const { title, start_time, end_time, priority, note, done, background_image_id, is_todo } = body;
   const errors = [];
 
   if (!title || typeof title !== 'string' || !title.trim()) {
     errors.push('title 不能为空');
   }
-  if (!TIME_RE.test(start_time)) errors.push('start_time 格式应为 HH:MM');
-  if (!TIME_RE.test(end_time)) errors.push('end_time 格式应为 HH:MM');
-  if (start_time && end_time && start_time >= end_time) {
-    errors.push('start_time 必须早于 end_time');
+  const isTodo = is_todo ? 1 : 0;
+  if (!isTodo) {
+    if (!TIME_RE.test(start_time)) errors.push('start_time 格式应为 HH:MM');
+    if (!TIME_RE.test(end_time)) errors.push('end_time 格式应为 HH:MM');
+    if (start_time && end_time && start_time >= end_time) {
+      errors.push('start_time 必须早于 end_time');
+    }
   }
   const p = Number(priority);
   if (!VALID_PRIORITIES.includes(p)) errors.push('priority 必须是 1/2/3');
@@ -41,12 +44,13 @@ function validateEventBody(body) {
     errors,
     value: {
       title: (title || '').trim().slice(0, 80),
-      start_time,
-      end_time,
+      start_time: isTodo ? null : start_time,
+      end_time: isTodo ? null : end_time,
       priority: p,
       note: (note || '').slice(0, 500),
       done: done === undefined ? 0 : (done ? 1 : 0),
       background_image_id: bgId,
+      is_todo: isTodo,
     },
   };
 }
@@ -86,13 +90,13 @@ router.get('/', (req, res) => {
 
   let rows;
   if (date) {
-    rows = db.prepare('SELECT * FROM events WHERE date = ? ORDER BY start_time ASC').all(date);
+    rows = db.prepare('SELECT * FROM events WHERE id IS NOT NULL AND date = ? ORDER BY start_time ASC').all(date);
   } else if (from && to) {
     rows = db
-      .prepare('SELECT * FROM events WHERE date BETWEEN ? AND ? ORDER BY date ASC, start_time ASC')
+      .prepare('SELECT * FROM events WHERE id IS NOT NULL AND date BETWEEN ? AND ? ORDER BY date ASC, start_time ASC')
       .all(from, to);
   } else {
-    rows = db.prepare('SELECT * FROM events ORDER BY date DESC, start_time ASC LIMIT 200').all();
+    rows = db.prepare('SELECT * FROM events WHERE id IS NOT NULL ORDER BY date DESC, start_time ASC LIMIT 200').all();
   }
   res.json(rows.map(decorateWithBackground));
 });
@@ -111,11 +115,15 @@ router.post('/', (req, res) => {
   const { errors, value } = validateEventBody(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join('；') });
 
+  const now = new Date().toISOString();
   const stmt = db.prepare(`
-    INSERT INTO events (date, title, start_time, end_time, priority, note, background_image_id)
-    VALUES (@date, @title, @start_time, @end_time, @priority, @note, @background_image_id)
+    INSERT INTO events (date, title, start_time, end_time, priority, note, done, created_at, updated_at, background_image_id, is_todo)
+    VALUES (@date, @title, @start_time, @end_time, @priority, @note, @done, @created_at, @updated_at, @background_image_id, @is_todo)
   `);
-  const result = stmt.run({ date, ...value });
+  const result = stmt.run({ date, ...value, created_at: now, updated_at: now });
+  if (!result.lastInsertRowid) {
+    return res.status(500).json({ error: '插入失败，事件 id 未生成' });
+  }
   const row = db.prepare('SELECT * FROM events WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(decorateWithBackground(row));
 });
@@ -129,6 +137,12 @@ router.put('/:id', (req, res) => {
   const mergedBg = Object.prototype.hasOwnProperty.call(req.body, 'background_image_id')
     ? incomingBg
     : existing.background_image_id;
+
+  // is_todo：允许更新；省略则保留原值
+  const incomingIsTodo = req.body.is_todo;
+  const mergedIsTodo = Object.prototype.hasOwnProperty.call(req.body, 'is_todo')
+    ? (incomingIsTodo ? 1 : 0)
+    : existing.is_todo;
 
   // completed_at：done 变 true → 记录时间；done 变 false → 清空；其余不变
   const incomingDone = req.body.done;
@@ -146,10 +160,12 @@ router.put('/:id', (req, res) => {
     note: req.body.note ?? existing.note,
     done: mergedDone,
     background_image_id: mergedBg,
+    is_todo: mergedIsTodo,
   });
   if (errors.length) return res.status(400).json({ error: errors.join('；') });
 
-  if (value.start_time >= value.end_time) {
+  // 非待办项需校验时间顺序
+  if (!mergedIsTodo && value.start_time >= value.end_time) {
     return res.status(400).json({ error: 'start_time 必须早于 end_time' });
   }
 
@@ -157,7 +173,7 @@ router.put('/:id', (req, res) => {
     UPDATE events
     SET title=@title, start_time=@start_time, end_time=@end_time,
         priority=@priority, note=@note, done=@done,
-        background_image_id=@background_image_id,
+        background_image_id=@background_image_id, is_todo=@is_todo,
         completed_at=${completed_at === null ? 'NULL' : "datetime('now','localtime')"},
         updated_at=datetime('now','localtime')
     WHERE id=@id

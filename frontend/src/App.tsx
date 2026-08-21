@@ -5,6 +5,7 @@ import { EventCalendar } from './components/EventCalendar';
 import { EventList } from './components/EventList';
 import { EventModal } from './components/EventModal';
 import { DiaryModal } from './components/DiaryModal';
+import { BatchExportDialog } from './components/BatchExportDialog';
 import { Legend } from './components/Legend';
 import { TaskDecomposerModal } from './components/TaskDecomposerModal';
 import { Timeline } from './components/Timeline';
@@ -49,6 +50,8 @@ export default function App() {
   const [decomposerOpen, setDecomposerOpen] = useState(false);
   // 日记弹窗：null=关闭；string=打开并预填该日期
   const [diaryModalDate, setDiaryModalDate] = useState<string | null>(null);
+  // 批量导出弹窗
+  const [batchExportOpen, setBatchExportOpen] = useState(false);
   // 日记缓存：日历内 DiaryEntry 提示条用
   const [diaryCache, setDiaryCache] = useState<Record<string, Diary>>({});
   // 完成提示弹窗
@@ -272,11 +275,11 @@ export default function App() {
 
   const handleCreate = async (draft: EventDraft) => {
     const created = await eventsApi.create({ ...draft, done: false });
-    setEvents((prev) => [...prev, created].sort((a, b) => a.start_time.localeCompare(b.start_time)));
+    setEvents((prev) => [...prev, created].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')));
     setEventsByDate((prev) => {
       const next = { ...prev };
       (next[created.date] ||= []).push(created);
-      next[created.date].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      next[created.date].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
       return next;
     });
   };
@@ -297,7 +300,7 @@ export default function App() {
       (next[oldDate] ||= []).filter((e) => e.id !== updated.id);
       if (dateChanged || updated.date === date) {
         (next[updated.date] ||= []).push(updated);
-        next[updated.date].sort((a, b) => a.start_time.localeCompare(b.start_time));
+        next[updated.date].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
       }
       return next;
     });
@@ -339,9 +342,9 @@ export default function App() {
 
   // 乐观更新 done：先改本地状态，再请求后端
   const handleToggleDone = async (target: Event, done: boolean) => {
-    // 完成时才弹提示（取消完成不弹）
     if (done && !target.done) {
-      showAcceptToast(target.title, `${target.start_time} – ${target.end_time}`);
+      const timeHint = target.isTodo ? '' : `${target.start_time ?? ''} – ${target.end_time ?? ''}`;
+      showAcceptToast(target.title, timeHint);
     }
     setEvents((prev) => prev.map((e) => (e.id === target.id ? { ...e, done } : e)));
     setEventsByDate((prev) => {
@@ -480,7 +483,7 @@ export default function App() {
         {view === 'timeline' ? (
           <div className="timeline-page">
             <Timeline
-              events={events}
+              events={events.filter((e) => !e.isTodo)}
               onSelectEvent={(e) => setModal({ kind: 'edit', event: e })}
               onAddAt={(m) => setModal({ kind: 'create', startMinutes: m })}
               onToggleDone={handleToggleDone}
@@ -490,6 +493,8 @@ export default function App() {
               events={events}
               onToggleDone={handleToggleDone}
               onSelectEvent={(e) => setModal({ kind: 'edit', event: e })}
+              onAdded={() => loadDay(date)}
+              date={date}
             />
           </div>
         ) : (() => {
@@ -517,6 +522,7 @@ export default function App() {
                     setDate(d);
                     setDiaryModalDate(d);
                   }}
+                  onBatchExport={() => setBatchExportOpen(true)}
                   onSelectDate={setDate}
                   onSelectEvent={(e) => setModal({ kind: 'edit', event: e })}
                   onDiaryChange={(d) => {
@@ -570,6 +576,14 @@ export default function App() {
           if (!d) return;
           setDiaryCache((prev) => ({ ...prev, [d.date]: d }));
         }}
+      />
+
+      <BatchExportDialog
+        open={batchExportOpen}
+        anchorDate={date}
+        knownDiaries={diaryCache}
+        themeCache={themeCache}
+        onClose={() => setBatchExportOpen(false)}
       />
 
       <AcceptedToast

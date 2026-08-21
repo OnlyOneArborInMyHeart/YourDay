@@ -175,6 +175,85 @@ export function DiaryModal({ open, date, diary: initDiary, theme, onThemeChange,
     }
   };
 
+  const exportMarkdown = async () => {
+    const frontmatter = [
+      '---',
+      `date: ${date}`,
+      titleDraft ? `title: ${titleDraft}` : '',
+      '---',
+      '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const blob = new Blob([frontmatter + content], { type: 'text/markdown;charset=utf-8' });
+    const safeTitle = titleDraft.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 40);
+    const fileName = safeTitle ? `${date}_${safeTitle}.md` : `${date}.md`;
+
+    // 优先尝试 File System Access API（用户可选目录，记忆上次目录）
+    const w = window as unknown as {
+      showSaveFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle>;
+    };
+    if (w.showSaveFilePicker) {
+      try {
+        const handle = await w.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
+      }
+    }
+    // 兜底：传统 <a download>，文件名沿用 fileName
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const pickAndReadFile = async () => {
+    const w = window as unknown as {
+      showOpenFilePicker?: (opts: unknown) => Promise<FileSystemFileHandle[]>;
+    };
+    if (w.showOpenFilePicker) {
+      try {
+        const [handle] = await w.showOpenFilePicker({
+          types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }],
+          multiple: false,
+        });
+        const file = await handle.getFile();
+        const text = await file.text();
+        const withoutFrontmatter = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+        setContent(withoutFrontmatter);
+        return;
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
+      }
+    }
+    importInputRef.current?.click();
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (!text) return;
+      const withoutFrontmatter = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+      setContent(withoutFrontmatter);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   if (!open) return null;
 
   const attachments = diary?.attachments || [];
@@ -273,6 +352,29 @@ export function DiaryModal({ open, date, diary: initDiary, theme, onThemeChange,
               multiple
               hidden
               onChange={(e) => handleFiles(e.target.files)}
+            />
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={exportMarkdown}
+              title="导出为 Markdown 文件"
+            >
+              📥 导出
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={pickAndReadFile}
+              title="从 Markdown 文件导入"
+            >
+              📤 导入
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".md,.markdown,text/markdown"
+              hidden
+              onChange={handleImport}
             />
           </div>
           <div className="modal__footer-right">

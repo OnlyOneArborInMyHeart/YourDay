@@ -25,7 +25,8 @@ export function formatDateLong(dateStr: string): string {
 const TIME_RE = /^(\d{2}):(\d{2})$/;
 
 /** 把 "HH:MM" 转换为当日 0 点起的分钟数 */
-export function timeToMinutes(t: string): number {
+export function timeToMinutes(t: string | null | undefined): number {
+  if (!t) return 0;
   const m = TIME_RE.exec(t);
   if (!m) return 0;
   return Number(m[1]) * 60 + Number(m[2]);

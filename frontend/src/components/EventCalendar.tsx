@@ -23,6 +23,8 @@ interface Props {
   onChangeTheme: (_targetDate: string, _title: string) => void;
   /** 双击格子 / 点 ✦ 打开日记弹窗 */
   onOpenDiary: (date: string) => void;
+  /** 打开批量导出弹窗 */
+  onBatchExport: () => void;
   onSelectDate: (next: string) => void;
   onSelectEvent: (event: Event) => void;
   /** 日记保存后的回调（App 用来刷新 cache） */
@@ -39,6 +41,7 @@ export function EventCalendar({
   themeCache,
   onChangeTheme: _onChangeTheme,
   onOpenDiary,
+  onBatchExport,
   onSelectDate,
   onSelectEvent,
 }: Props) {
@@ -105,6 +108,13 @@ export function EventCalendar({
             回到今天
           </button>
         )}
+        <button
+          className="ghost-btn"
+          onClick={onBatchExport}
+          title="批量导出日记为 Markdown 文件"
+        >
+          📦 批量导出
+        </button>
       </header>
 
       <div className="event-calendar__weekdays">
@@ -120,11 +130,11 @@ export function EventCalendar({
 
       <div className="event-calendar__grid" role="grid" ref={gridRef}>
         {grid.map((d) => {
-          const events = eventsByDate[d] || [];
+          const events = (eventsByDate[d] || []).filter((e) => !e.isTodo);
           const inMonth = isSameMonth(d, monthStart);
           const isToday = d === today;
           const isSelected = d === date;
-          const sorted = Array.isArray(events) ? [...events].sort((a, b) => a.start_time.localeCompare(b.start_time)) : [];
+          const sorted = [...events].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
           const visible = sorted.slice(0, MAX_PREVIEW);
           const overflow = sorted.length - visible.length;
           const holiday = getHolidayInfo(d);
@@ -242,8 +252,9 @@ export function EventCalendar({
           <div className="event-calendar__selected-empty">点击右侧 + 新建事项 · 这一天空空如也</div>
         ) : (
           <ul className="event-calendar__selected-list">
-            {[...eventsByDate[date]]
-              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+            {[...(eventsByDate[date] || [])]
+              .filter((e) => !e.isTodo)
+              .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
               .map((e) => (
                 <li
                   key={e.id}

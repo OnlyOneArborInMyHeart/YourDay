@@ -35,9 +35,14 @@ interface LaidOutEvent {
 }
 
 function layoutEvents(events: Event[]): LaidOutEvent[] {
-  const sorted = [...events].sort((a, b) =>
-    a.start_time === b.start_time ? a.end_time.localeCompare(b.end_time) : a.start_time.localeCompare(b.start_time),
-  );
+  // 只收到非 isTodo 项，start_time/end_time 不为 null
+  const sorted = [...events].sort((a, b) => {
+    const sa = a.start_time as string;
+    const sb = b.start_time as string;
+    const ea = a.end_time as string;
+    const eb = b.end_time as string;
+    return sa === sb ? ea.localeCompare(eb) : sa.localeCompare(sb);
+  });
 
   interface Pending {
     event: Event;
@@ -53,8 +58,8 @@ function layoutEvents(events: Event[]): LaidOutEvent[] {
     if (!cluster.length) return;
     const totalLanes = Math.max(...cluster.map((c) => c.lane + 1));
     cluster.forEach((c) => {
-      const start = timeToMinutes(c.event.start_time);
-      const end = timeToMinutes(c.event.end_time);
+      const start = timeToMinutes(c.event.start_time as string);
+      const end = timeToMinutes(c.event.end_time as string);
       result.push({
         event: c.event,
         top: (start / 60) * ROW_HEIGHT,
@@ -67,8 +72,8 @@ function layoutEvents(events: Event[]): LaidOutEvent[] {
   };
 
   sorted.forEach((event) => {
-    const start = timeToMinutes(event.start_time);
-    const end = timeToMinutes(event.end_time);
+    const start = timeToMinutes(event.start_time as string);
+    const end = timeToMinutes(event.end_time as string);
     if (start >= clusterEnd) flush();
 
     let lane = 0;
@@ -107,7 +112,7 @@ export function Timeline({
       return;
     }
     const firstStart = events.reduce((min, e) => {
-      const m = timeToMinutes(e.start_time);
+      const m = timeToMinutes(e.start_time as string);
       return m < min ? m : min;
     }, Infinity);
     if (!Number.isFinite(firstStart)) return;
@@ -260,8 +265,8 @@ function EventBlock({
     endMin: number;
   } | null>(null);
 
-  const originStart = timeToMinutes(event.start_time);
-  const originEnd = timeToMinutes(event.end_time);
+  const originStart = timeToMinutes(event.start_time as string);
+  const originEnd = timeToMinutes(event.end_time as string);
 
   const startMin = draft ? draft.startMin : originStart;
   const endMin = draft ? draft.endMin : originEnd;
