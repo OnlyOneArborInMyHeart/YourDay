@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Priority, Todo, TodoDraft, TodoPatch } from '../types';
+import type { Priority, Todo, TodoDraft, TodoPatch, TodoNoteImage } from '../types';
 import { todosApi, type TodoListQuery } from '../api/todos';
+import { todoAttachmentsApi } from '../api/todoAttachments';
 import { toDateString } from '../utils/date';
+import {
+  NoteEditor,
+  parseNoteImages,
+  stripNoteImages,
+} from './NoteEditor';
+import './NoteEditor.css';
 import './TodoBoard.css';
 
 interface Props {
@@ -205,6 +212,22 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
     onDecompose({ title: t.title, priority: t.priority, note: t.note });
   };
 
+  /**
+   * 用户在编辑某条 todo 时点掉了某张已插入图片的 X。
+   * - 本地：立刻从 editDraft.note 移除对应 token
+   * - 远程：等用户点"保存"时由后端 PUT 路由自动清理孤儿图
+   */
+  const handleImageRemoved = (
+    _t: Todo,
+    imageId: number,
+    draft: TodoPatch,
+    setDraft: (next: TodoPatch) => void
+  ) => {
+    const note = draft.note ?? '';
+    const nextNote = stripNoteImages(note, imageId);
+    setDraft({ ...draft, note: nextNote });
+  };
+
   return (
     <section
       className="todo-board"
@@ -321,19 +344,13 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
                 }
               }}
             />
-            <textarea
-              className="field__input field__textarea"
+            <NoteEditor
+              value={composer.note ?? ''}
+              onChange={(v) => setComposer((c) => ({ ...c, note: v }))}
+              noteImages={[]}
+              onImageRemoved={() => undefined}
               placeholder="备注（可选）"
-              rows={2}
               maxLength={500}
-              value={composer.note}
-              onChange={(e) => setComposer((c) => ({ ...c, note: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setComposerOpen(false);
-                  setComposer(EMPTY_DRAFT());
-                }
-              }}
             />
             <div className="todo-composer__actions">
               <button
@@ -384,6 +401,8 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
                 onChange={setEditDraft}
                 onSave={() => saveEdit(t.id)}
                 onCancel={cancelEdit}
+                noteImages={t.note_images ?? []}
+                onImageRemoved={(id) => handleImageRemoved(t, id, editDraft, setEditDraft)}
               />
             ) : (
               <TodoRow
@@ -420,6 +439,8 @@ export function TodoBoard({ onDecompose, onTodoDone }: Props) {
                     onChange={setEditDraft}
                     onSave={() => saveEdit(t.id)}
                     onCancel={cancelEdit}
+                    noteImages={t.note_images ?? []}
+                    onImageRemoved={(id) => handleImageRemoved(t, id, editDraft, setEditDraft)}
                   />
                 ) : (
                   <TodoRow
@@ -529,7 +550,29 @@ function TodoRow({
             {priorityLabel(todo.priority)}
           </span>
         </div>
-        {todo.note && <div className="todo-row__note">{todo.note}</div>}
+        {todo.note && (
+          <div className="todo-row__note">
+            {stripNoteImages(todo.note) || (
+              <span className="todo-row__note-empty">（仅图片）</span>
+            )}
+            {todo.note_images && todo.note_images.length > 0 && (
+              <div className="todo-row__note-images">
+                {todo.note_images.map((img) => (
+                  <a
+                    key={img.id}
+                    className="todo-row__note-image"
+                    href={img.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={img.original_name || '点击查看大图'}
+                  >
+                    <img src={img.url} alt={img.original_name} loading="lazy" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="todo-row__meta">
           {todo.due_date && (
             <span className={`todo-row__due ${overdue ? 'is-overdue' : ''}`}>
@@ -574,11 +617,15 @@ function EditRow({
   onChange,
   onSave,
   onCancel,
+  noteImages,
+  onImageRemoved,
 }: {
   draft: TodoPatch;
   onChange: (next: TodoPatch) => void;
   onSave: () => void;
   onCancel: () => void;
+  noteImages: TodoNoteImage[];
+  onImageRemoved: (id: number) => void;
 }) {
   return (
     <li className="todo-row todo-row--editing">
@@ -618,13 +665,13 @@ function EditRow({
             />
           </label>
         </div>
-        <textarea
-          className="field__input field__textarea"
-          rows={2}
-          maxLength={500}
-          placeholder="备注"
+        <NoteEditor
           value={draft.note ?? ''}
-          onChange={(e) => onChange({ ...draft, note: e.target.value })}
+          onChange={(v) => onChange({ ...draft, note: v })}
+          noteImages={noteImages}
+          onImageRemoved={onImageRemoved}
+          placeholder="备注"
+          maxLength={500}
         />
         <div className="todo-row__edit-actions">
           <button className="ghost-btn ghost-btn--sm" onClick={onCancel}>

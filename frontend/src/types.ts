@@ -69,6 +69,22 @@ export interface Todo {
   updated_at: string;
   /** 首次完成的时间，done=false 时为 null。 */
   completed_at: string | null;
+  /**
+   * note 中实际引用的图片元数据（按 note 中的出现顺序）。
+   * 通过 `![todo-img:ID](caption)` 这样的 markdown token 嵌入 note。
+   */
+  note_images: TodoNoteImage[];
+}
+
+export interface TodoNoteImage {
+  id: number;
+  filename: string;
+  mime: string;
+  size: number;
+  original_name: string;
+  created_at: string;
+  /** 浏览器可访问的 URL，例如 /api/todo-attachments/xxx.png */
+  url: string;
 }
 
 /** 新建 todo 的请求体（必填字段收敛） */

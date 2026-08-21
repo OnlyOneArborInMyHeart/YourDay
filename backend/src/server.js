@@ -9,6 +9,7 @@ import todosRouter from './routes/todos.js';
 import diariesRouter from './routes/diaries.js';
 import uploadsRouter from './routes/uploads.js';
 import eventBackgroundsRouter from './routes/eventBackgrounds.js';
+import todoAttachmentsRouter from './routes/todoAttachments.js';
 import musicRouter from './routes/music.js';
 import { startCarryOverScheduler, runCarryOverNow } from './carryover.js';
 
@@ -46,6 +47,19 @@ app.use(
   })
 );
 app.use('/api/event-backgrounds', eventBackgroundsRouter);
+
+// todo 备注内嵌图片：上传 → data/uploads/，通过 /api/todo-attachments/:filename 暴露。
+// 静态托管放前面，使 GET 直接命中文件；router 仍处理 POST/GET 列表/DELETE。
+app.use(
+  '/api/todo-attachments',
+  express.static(uploadsDir, {
+    maxAge: '7d',
+    fallthrough: true,
+    index: false,
+    redirect: false,
+  })
+);
+app.use('/api/todo-attachments', todoAttachmentsRouter);
 
 // 音乐库：上传音频文件存到 data/uploads/，通过 /api/music/:filename 暴露给前端。
 // 封面图：存到 data/uploads/covers/，通过 /api/music/covers/:filename 暴露。

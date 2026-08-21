@@ -136,6 +136,20 @@ if (!todoCols.some((c) => c.name === 'completed_at')) {
   db.exec("ALTER TABLE todos ADD COLUMN completed_at TEXT DEFAULT NULL");
 }
 
+// todo 备注内嵌图片：每张图独立存储，通过 note 中的 markdown token `![todo-img:N]()`
+// 引用。一个 todo 可引用多张，跨 todo 也可复用同一张（仅由前端去重 / 复用）。
+db.exec(`
+  CREATE TABLE IF NOT EXISTS todo_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    original_name TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_todo_attachments_created ON todo_attachments(created_at);
+`);
+
 // 每日日记：一天一行（PK=date）。
 // - title 兼容老的"主题名"，长度仍限制 40 字
 // - markdown_content 存原始 Markdown 文本（上限 64KB）

@@ -356,6 +356,41 @@
   white-space: pre-wrap;
 }
 
+.todo-row__note-empty {
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.todo-row__note-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.todo-row__note-image {
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elev);
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.todo-row__note-image:hover {
+  transform: scale(1.04);
+  border-color: var(--color-primary);
+}
+
+.todo-row__note-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .todo-row__meta {
   margin-top: 6px;
   display: flex;
