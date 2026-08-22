@@ -29,7 +29,7 @@
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 1px;
-  background: linear-gradient(135deg, #1f2937 0%, #4f52e0 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -539,12 +539,12 @@
 }
 .todo-row__progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   border-radius: inherit;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .todo-row__progress.is-full .todo-row__progress-bar {
-  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(90deg, var(--color-p3-text) 0%, var(--color-p3-bg-strong) 100%);
 }
 
 /* —— 父项已完成：子项不可编辑（锁定）—— */

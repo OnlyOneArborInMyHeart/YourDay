@@ -53,8 +53,8 @@
 }
 .diary-modal__title-input:focus {
   border-color: var(--color-primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: var(--color-bg-elev);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
 /* 覆盖 EventModal.css 里 .modal__body 的样式：弹窗主体接管高度/滚动 */
@@ -81,7 +81,7 @@
   flex-direction: column;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--color-bg-elev);
   overflow: hidden;
   min-height: 0;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
@@ -220,7 +220,7 @@
   gap: 6px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--color-bg-elev);
   border: 1px solid var(--color-border);
   font-size: 12px;
   max-width: 100%;

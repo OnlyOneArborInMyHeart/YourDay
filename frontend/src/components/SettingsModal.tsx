@@ -7,6 +7,9 @@ import './SettingsModal.css';
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** 皮肤模式 */
+  themeMode: 'default' | 'minecraft';
+  onThemeModeChange: (mode: 'default' | 'minecraft') => void;
   /** 来自父组件的音乐库（唱片播放器也要用），方便外部状态实时同步 */
   library: MusicTrack[];
   /** modal 内部对曲目列表的修改会冒泡到父组件 */
@@ -19,7 +22,7 @@ function humanSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function SettingsModal({ open, onClose, library, onLibraryChange }: Props) {
+export function SettingsModal({ open, onClose, themeMode, onThemeModeChange, library, onLibraryChange }: Props) {
   const [tracks, setTracks] = useState<MusicTrack[]>(library);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +232,7 @@ export function SettingsModal({ open, onClose, library, onLibraryChange }: Props
         onClick={(e) => e.stopPropagation()}
       >
         <header className="settings-modal__head">
-          <h2 className="settings-modal__title">⚙ 设置 · 音乐库</h2>
+          <h2 className="settings-modal__title">⚙ 设置</h2>
           <button
             type="button"
             className="settings-modal__close"
@@ -241,36 +244,65 @@ export function SettingsModal({ open, onClose, library, onLibraryChange }: Props
           </button>
         </header>
 
-        {error && <div className="settings-modal__error">{error}</div>}
-
-        <section className="settings-modal__upload">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac"
-            multiple
-            hidden
-            onChange={(e) => {
-              handleUploadFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          <button
-            type="button"
-            className="settings-modal__upload-btn"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            title="选择本地音频文件上传到音乐库（mp3 / wav / ogg / m4a / flac）"
-          >
-            {uploading ? '上传中…' : '🎵 上传音乐'}
-          </button>
-          <p className="settings-modal__hint">
-            支持 mp3 / wav / ogg / m4a / flac / aac，单文件最大 80 MB。
-            上传后可在右侧唱片播放器里自动播放。
-          </p>
+        {/* 换肤区 */}
+        <section className="settings-modal__section settings-modal__theme-section">
+          <div className="settings-modal__section-title">🎨 换肤</div>
+          <div className="settings-modal__theme-options">
+            <button
+              type="button"
+              className={`settings-modal__theme-btn ${themeMode === 'default' ? 'is-active' : ''}`}
+              onClick={() => onThemeModeChange('default')}
+            >
+              <span className="settings-modal__theme-icon">🌸</span>
+              <span className="settings-modal__theme-label">默认 · 清新紫</span>
+            </button>
+            <button
+              type="button"
+              className={`settings-modal__theme-btn ${themeMode === 'minecraft' ? 'is-active' : ''}`}
+              onClick={() => onThemeModeChange('minecraft')}
+            >
+              <span className="settings-modal__theme-icon">⛏</span>
+              <span className="settings-modal__theme-label">Minecraft</span>
+            </button>
+          </div>
         </section>
 
-        <section className="settings-modal__list">
+        <div className="settings-modal__divider" />
+
+        {/* 音乐库区 */}
+        <section className="settings-modal__section settings-modal__music-section">
+          <div className="settings-modal__section-title">🎵 音乐库</div>
+
+          {error && <div className="settings-modal__error">{error}</div>}
+
+          <section className="settings-modal__upload">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac"
+              multiple
+              hidden
+              onChange={(e) => {
+                handleUploadFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              className="settings-modal__upload-btn"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              title="选择本地音频文件上传到音乐库（mp3 / wav / ogg / m4a / flac）"
+            >
+              {uploading ? '上传中…' : '🎵 上传音乐'}
+            </button>
+            <p className="settings-modal__hint">
+              支持 mp3 / wav / ogg / m4a / flac / aac，单文件最大 80 MB。
+              上传后可在右侧唱片播放器里自动播放。
+            </p>
+          </section>
+
+          <section className="settings-modal__list">
           {loading ? (
             <div className="settings-modal__loading">加载中…</div>
           ) : tracks.length === 0 ? (
@@ -431,6 +463,7 @@ export function SettingsModal({ open, onClose, library, onLibraryChange }: Props
               ))}
             </ul>
           )}
+        </section>
         </section>
       </div>
 

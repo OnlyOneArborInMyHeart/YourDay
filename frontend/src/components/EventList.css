@@ -30,12 +30,12 @@
 
 .day-panel.is-active {
   /* 当前焦点页：略亮一点的背景 */
-  background: linear-gradient(180deg, #fafbff 0%, var(--color-bg-elev) 60%);
+  background: linear-gradient(180deg, var(--color-bg-elev) 0%, var(--color-bg-elev) 60%);
 }
 
 /* 当天 + 当前焦点：更强的边框和阴影 */
 .day-panel.is-today {
-  background: linear-gradient(180deg, #eef4ff 0%, #fafbff 100%);
+  background: var(--color-primary-soft);
   box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 .day-panel.is-today.is-active {
@@ -148,11 +148,21 @@
   content: '';
   position: absolute;
   inset: 0;
+  /* default 主题：白色蒙版，让标题可读 */
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.78) 0%,
     rgba(255, 255, 255, 0.62) 45%,
     rgba(255, 255, 255, 0.35) 100%
+  );
+}
+/* mc 主题：换成深色蒙版，与黑曜石背景一致 */
+body.mc-theme--system .event-card__bg::after {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-elev) 0%,
+    color-mix(in srgb, var(--color-bg-elev) 75%, transparent) 45%,
+    color-mix(in srgb, var(--color-bg-elev) 40%, transparent) 100%
   );
 }
 .event-card:hover .event-card__bg {
@@ -175,7 +185,7 @@
   height: 22px;
   border-radius: 50%;
   border: 1.6px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--color-bg-elev);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,7 +439,7 @@
   font-size: 11px;
   margin-top: 4px;
   padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--color-bg-soft);
   border-radius: 999px;
 }
 
@@ -453,6 +463,11 @@
 .event-card.has-bg .event-card__time,
 .event-card.has-bg .event-card__note {
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.65), 0 0 6px rgba(255, 255, 255, 0.5);
+}
+/* mc 主题：白色阴影改为深色 */
+body.mc-theme--system .event-card.has-bg .event-card__time,
+body.mc-theme--system .event-card.has-bg .event-card__note {
+  text-shadow: 0 1px 2px var(--color-bg-elev), 0 0 6px var(--color-bg-elev);
 }
   overflow: hidden;
 }

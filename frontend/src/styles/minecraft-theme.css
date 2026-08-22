@@ -1,0 +1,1266 @@
+/**
+ * ================================================================
+ * Minecraft Theme — YourDay UI 主题包
+ * ================================================================
+ * 设计理念：
+ * - 保留 YourDay 原有圆角 + 阴影的友好感
+ * - 引入 Minecraft 标志性配色（草地绿、泥土棕、矿石青、钻石蓝）
+ * - 用 CSS 复刻像素块质感，无需图片资源
+ * - 语义化 CSS 变量，可局部覆盖，不破坏全局一致性
+ *
+ * 使用方式：
+ *   import './styles/minecraft-theme.css';
+ *   // 或在 index.html 的 <link> 中引入
+ *
+ * 覆盖示例（在 App.css 或组件局部中覆盖）：
+ *   :root { --mc-primary: #50C878; }  ← 只换主色
+ *   .event-calendar { --mc-accent: #FFD700; } ← 局部换强调色
+ * ================================================================
+ */
+
+/* ——————————————————————————————————
+   1. Google Fonts：像素/块感字体
+   —————————————————————————————————— */
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+/* ——————————————————————————————————
+   2. Minecraft 调色板（语义化 CSS 变量）
+   —————————————————————————————————— */
+:root {
+  /* — 主色系 — */
+  --mc-grass:        #5D8C3E;   /* 草方块顶面 */
+  --mc-grass-light:  #7CB342;   /* 草地亮色 */
+  --mc-grass-dark:   #3E6B28;   /* 草地暗色 */
+  --mc-dirt:         #8B5A2B;   /* 泥土/木头 */
+  --mc-dirt-light:   #A0694B;   /* 泥土亮色 */
+  --mc-dirt-dark:    #5C3A1E;   /* 泥土暗色 */
+
+  /* — 矿石 / 强调色 — */
+  --mc-primary:      #50C878;   /*  Creeper 绿（主按钮） */
+  --mc-primary-dark: #388E5A;   /*  Creeper 绿暗 */
+  --mc-primary-glow: rgba(80, 200, 120, 0.35);
+  --mc-diamond:      #4DD0E1;  /* 钻石青（信息/次要） */
+  --mc-gold:         #FFD700;  /* 金锭黄（强调/徽章） */
+  --mc-lapis:        #247BA0;  /* 青金蓝 */
+  --mc-redstone:     #E74C3C;  /* 红石红 */
+  --mc-obsidian:     #1A1A2E;  /* 黑曜石（深夜模式背景） */
+
+  /* — 背景层次（对应原设计但带 Minecraft 气质）— */
+  --mc-bg:           #F0EDE4;  /* 主背景：羊皮纸 / 地图纸感 */
+  --mc-bg-elev:      #FDFCF8;  /* 卡片高抬：骨块白 */
+  --mc-bg-soft:      #E8E2D5;  /* 次级区域：砂岩感 */
+  --mc-bg-inset:     #D9D0BE;  /* 内凹区域：深砂岩 */
+
+  /* — 边框 — */
+  --mc-border:       #C8B89A;
+  --mc-border-strong:#A89878;
+  --mc-border-grass: #3E6B28;
+
+  /* — 文字 — */
+  --mc-text:         #2C1810;   /* 深棕文字（羊皮纸上的墨色） */
+  --mc-text-soft:   #6B5030;   /* 次级文字 */
+  --mc-text-muted:  #9B8060;   /* 弱化文字 */
+
+  /* — 优先级配色（Minecraft 风格）— */
+  --mc-p1-bg:        #FFEBE9;   /* P1 红石红浅 */
+  --mc-p1-bg-strong: #E74C3C;
+  --mc-p1-border:    #F5A09A;
+  --mc-p1-text:      #B71C1C;
+
+  --mc-p2-bg:        #FFF8E1;   /* P2 金锭黄浅 */
+  --mc-p2-bg-strong: #FFD700;
+  --mc-p2-border:    #FFE082;
+  --mc-p2-text:      #E65100;
+
+  --mc-p3-bg:        #E8F5E9;   /* P3 草方块浅 */
+  --mc-p3-bg-strong: #50C878;
+  --mc-p3-border:    #A5D6A7;
+  --mc-p3-text:      #1B5E20;
+
+  /* — 圆角（保持原设计的圆润友好感）— */
+  --mc-radius-sm: 6px;    /* 像素感稍强的圆角 */
+  --mc-radius-md: 10px;
+  --mc-radius-lg: 16px;
+  --mc-radius-xl: 22px;
+
+  /* — 阴影（Minecraft 风格：像素块投影）— */
+  --mc-shadow-sm: 2px 2px 0 rgba(44, 24, 16, 0.15);
+  --mc-shadow-md: 4px 4px 0 rgba(44, 24, 16, 0.18);
+  --mc-shadow-lg: 6px 6px 0 rgba(44, 24, 16, 0.22);
+
+  /* — 字体 — */
+  --mc-font-pixel:  'Silkscreen', 'Noto Sans SC', sans-serif;
+  --mc-font-sans:   'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* — 别名映射：让组件既能用 --mc-* 也能用 --color-* —
+     此处只声明 mc 自己的别名映射，主题颜色由 global.css 的 :root 与 body.mc-theme--system 覆盖 */
+  --color-primary:      var(--mc-primary);
+  --color-primary-hover:var(--mc-primary-dark);
+  --color-primary-soft: var(--mc-primary-glow);
+  --color-accent:       var(--mc-diamond);
+  --color-accent-soft:  rgba(77, 208, 225, 0.15);
+  --color-success:      var(--mc-primary);
+  --color-warning:      var(--mc-gold);
+  --color-danger:       var(--mc-redstone);
+  --color-p1-bg:        var(--mc-p1-bg);
+  --color-p1-text:      var(--mc-p1-text);
+  --color-p2-bg:        var(--mc-p2-bg);
+  --color-p2-text:      var(--mc-p2-text);
+  --color-p3-bg:        var(--mc-p3-bg);
+  --color-p3-text:      var(--mc-p3-text);
+  --shadow-sm:    var(--mc-shadow-sm);
+  --shadow-md:    var(--mc-shadow-md);
+  --shadow-lg:    var(--mc-shadow-lg);
+}
+
+/* Minecraft 主题（黑曜石暗色板）：通过 body 类覆盖 —— 与 global.css 的 body.mc-theme--system 互补 */
+body.mc-theme--system {
+  --mc-bg:           #1C1C28;
+  --mc-bg-elev:      #252535;
+  --mc-bg-soft:      #1E1E2C;
+  --mc-bg-inset:     #141420;
+  --mc-border:       #3A3A50;
+  --mc-border-strong:#4A4A65;
+  --mc-text:         #E8E0D4;
+  --mc-text-soft:    #A09888;
+  --mc-text-muted:   #706050;
+  --mc-shadow-sm:    2px 2px 0 rgba(0, 0, 0, 0.4);
+  --mc-shadow-md:    4px 4px 0 rgba(0, 0, 0, 0.45);
+  --mc-shadow-lg:    6px 6px 0 rgba(0, 0, 0, 0.5);
+
+  background: var(--mc-bg);
+  color: var(--mc-text);
+  font-family: var(--mc-font-sans);
+}
+
+/* ——————————————————————————————————
+   3. 全局重置（Minecraft 风格）
+   —————————————————————————————————— */
+.mc-body {
+  background-color: var(--mc-bg);
+  color: var(--mc-text);
+  font-family: var(--mc-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ——————————————————————————————————
+   4. 像素块标题装饰（可复用于任何标题）
+   使用方式：<h2 class="mc-title">我的标题</h2>
+   —————————————————————————————————— */
+.mc-title {
+  font-family: var(--mc-font-pixel);
+  font-size: 14px;
+  color: var(--mc-text);
+  letter-spacing: 0.05em;
+  position: relative;
+  display: inline-block;
+  padding: 4px 12px 4px 8px;
+  background: var(--mc-grass);
+  color: #fff;
+  border-radius: var(--mc-radius-sm);
+  box-shadow: var(--mc-shadow-sm);
+  text-shadow: 1px 1px 0 var(--mc-grass-dark);
+}
+
+.mc-title::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 4px;
+  right: 4px;
+  height: 4px;
+  background: var(--mc-dirt);
+  border-radius: 0 0 var(--mc-radius-sm) var(--mc-radius-sm);
+}
+
+/* ——————————————————————————————————
+   5. 主按钮（Creeper 绿，块感强）
+   —————————————————————————————————— */
+.mc-btn {
+  font-family: var(--mc-font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  background: var(--mc-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--mc-radius-md);
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 -4px 0 var(--mc-primary-dark),
+    var(--mc-shadow-sm);
+  transition: transform 80ms, box-shadow 80ms, filter 80ms;
+  text-shadow: 1px 1px 0 var(--mc-primary-dark);
+  position: relative;
+  top: 0;
+}
+
+.mc-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 -4px 0 var(--mc-primary-dark),
+    var(--mc-shadow-md);
+}
+
+.mc-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 0 var(--mc-primary-dark),
+    1px 1px 0 rgba(44,24,16,0.1);
+}
+
+.mc-btn--secondary {
+  background: var(--mc-bg-elev);
+  color: var(--mc-text);
+  border: 2px solid var(--mc-border);
+  box-shadow:
+    inset 0 -3px 0 var(--mc-border),
+    var(--mc-shadow-sm);
+  text-shadow: none;
+}
+
+.mc-btn--secondary:hover {
+  border-color: var(--mc-grass);
+  color: var(--mc-grass-dark);
+}
+
+/* ——————————————————————————————————
+   6. 幽灵按钮（边框样式，柔和）
+   —————————————————————————————————— */
+.mc-ghost {
+  font-family: var(--mc-font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  background: transparent;
+  color: var(--mc-text-soft);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+
+.mc-ghost:hover {
+  border-color: var(--mc-primary);
+  color: var(--mc-primary-dark);
+  background: rgba(80, 200, 120, 0.08);
+}
+
+/* ——————————————————————————————————
+   7. 卡片容器
+   —————————————————————————————————— */
+.mc-card {
+  background: var(--mc-bg-elev);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  box-shadow: var(--mc-shadow-md);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 草地顶边装饰 */
+.mc-card--grass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--mc-grass) 0%,
+    var(--mc-grass-light) 20%,
+    var(--mc-grass) 40%,
+    var(--mc-grass-light) 60%,
+    var(--mc-grass) 80%,
+    var(--mc-grass-light) 100%
+  );
+  border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
+}
+
+/* ——————————————————————————————————
+   8. 标签徽章（Minecraft 物品栏风格）
+   —————————————————————————————————— */
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mc-font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: var(--mc-radius-sm);
+  border: 2px solid;
+  box-shadow: 1px 1px 0 rgba(44,24,16,0.2);
+}
+
+.mc-badge--grass {
+  background: var(--mc-grass);
+  color: #fff;
+  border-color: var(--mc-grass-dark);
+  text-shadow: 1px 1px 0 var(--mc-grass-dark);
+}
+
+.mc-badge--gold {
+  background: var(--mc-gold);
+  color: var(--mc-dirt-dark);
+  border-color: #C8A000;
+  text-shadow: none;
+}
+
+.mc-badge--diamond {
+  background: var(--mc-diamond);
+  color: #fff;
+  border-color: #26A69A;
+  text-shadow: 1px 1px 0 #1A7A8A;
+}
+
+.mc-badge--dirt {
+  background: var(--mc-dirt-light);
+  color: #fff;
+  border-color: var(--mc-dirt);
+  text-shadow: 1px 1px 0 var(--mc-dirt-dark);
+}
+
+.mc-badge--creeper {
+  background: var(--mc-primary);
+  color: #fff;
+  border-color: var(--mc-primary-dark);
+  text-shadow: 1px 1px 0 var(--mc-primary-dark);
+}
+
+/* ——————————————————————————————————
+   9. 进度条（像素块风格）
+   —————————————————————————————————— */
+.mc-progress {
+  background: var(--mc-bg-inset);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-sm);
+  height: 20px;
+  overflow: hidden;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.mc-progress__fill {
+  height: 100%;
+  background: var(--mc-grass);
+  border-radius: 3px;
+  transition: width 300ms ease;
+  box-shadow: inset 0 -2px 0 var(--mc-grass-dark);
+  flex-shrink: 0;
+}
+
+.mc-progress__fill--gold {
+  background: var(--mc-gold);
+  box-shadow: inset 0 -2px 0 #C8A000;
+}
+
+.mc-progress__fill--diamond {
+  background: var(--mc-diamond);
+  box-shadow: inset 0 -2px 0 #26A69A;
+}
+
+/* ——————————————————————————————————
+   10. 输入框（像素边框风格）
+   —————————————————————————————————— */
+.mc-input {
+  width: 100%;
+  font-family: var(--mc-font-sans);
+  font-size: 14px;
+  background: var(--mc-bg-elev);
+  color: var(--mc-text);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  padding: 9px 13px;
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+  box-shadow: inset 2px 2px 0 var(--mc-bg-inset);
+}
+
+.mc-input:focus {
+  border-color: var(--mc-grass);
+  box-shadow:
+    inset 2px 2px 0 var(--mc-bg-inset),
+    0 0 0 3px var(--mc-primary-glow);
+}
+
+.mc-input::placeholder {
+  color: var(--mc-text-muted);
+  font-style: italic;
+}
+
+/* ——————————————————————————————————
+   11. 分隔线（草地风格）
+   —————————————————————————————————— */
+.mc-divider {
+  border: none;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--mc-grass) 10%,
+    var(--mc-grass-light) 30%,
+    var(--mc-grass) 50%,
+    var(--mc-grass-light) 70%,
+    var(--mc-grass) 90%,
+    transparent 100%
+  );
+  border-radius: 2px;
+  margin: 16px 0;
+}
+
+/* ——————————————————————————————————
+   12. 图标按钮（物品栏格子风格）
+   —————————————————————————————————— */
+.mc-icon-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--mc-bg-elev);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: border-color 100ms, background 100ms, transform 80ms;
+  box-shadow: var(--mc-shadow-sm);
+  color: var(--mc-text-soft);
+}
+
+.mc-icon-btn:hover {
+  border-color: var(--mc-primary);
+  background: rgba(80, 200, 120, 0.08);
+  color: var(--mc-primary-dark);
+  transform: translateY(-1px);
+}
+
+.mc-icon-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* ——————————————————————————————————
+   13. 弹窗遮罩 & 面板（Minecraft 箱子风格）
+   —————————————————————————————————— */
+.mc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 24, 16, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: mc-fade-in 160ms ease-out;
+}
+
+@keyframes mc-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mc-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: min(82vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--mc-bg-elev);
+  color: var(--mc-text);
+  border: 3px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius-lg);
+  box-shadow:
+    8px 8px 0 rgba(44, 24, 16, 0.25),
+    inset 0 0 0 1px rgba(255,255,255,0.3);
+  overflow: hidden;
+  animation: mc-modal-in 220ms ease-out;
+}
+
+@keyframes mc-modal-in {
+  from { transform: translateY(8px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.mc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 3px solid var(--mc-border);
+  background: linear-gradient(180deg, rgba(93, 140, 62, 0.1), transparent);
+}
+
+.mc-modal__title {
+  font-family: var(--mc-font-pixel);
+  font-size: 13px;
+  color: var(--mc-text);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.mc-modal__close {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 2px solid var(--mc-border);
+  color: var(--mc-text-soft);
+  border-radius: var(--mc-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 100ms, background 100ms;
+}
+
+.mc-modal__close:hover {
+  border-color: var(--mc-redstone);
+  color: var(--mc-redstone);
+  background: rgba(231, 76, 60, 0.08);
+}
+
+/* ——————————————————————————————————
+   14. Chip / 药草箭标签
+   —————————————————————————————————— */
+.mc-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--mc-radius-xl);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1.5px solid;
+  cursor: default;
+}
+
+.mc-chip--p1 {
+  background: var(--mc-p1-bg);
+  color: var(--mc-p1-text);
+  border-color: var(--mc-p1-border);
+}
+
+.mc-chip--p2 {
+  background: var(--mc-p2-bg);
+  color: var(--mc-p2-text);
+  border-color: var(--mc-p2-border);
+}
+
+.mc-chip--p3 {
+  background: var(--mc-p3-bg);
+  color: var(--mc-p3-text);
+  border-color: var(--mc-p3-border);
+}
+
+/* ——————————————————————————————————
+   15. 列表项（Minecraft 物品栏格子风格）
+   —————————————————————————————————— */
+.mc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--mc-bg-elev);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  cursor: pointer;
+  transition: border-color 100ms, transform 80ms, box-shadow 80ms;
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.mc-item:hover {
+  border-color: var(--mc-grass);
+  transform: translateX(2px);
+  box-shadow: var(--mc-shadow-md);
+}
+
+.mc-item--selected {
+  border-color: var(--mc-primary);
+  background: rgba(80, 200, 120, 0.06);
+  box-shadow:
+    var(--mc-shadow-md),
+    0 0 0 2px var(--mc-primary-glow);
+}
+
+/* 物品格子图标位 */
+.mc-item__icon {
+  width: 40px;
+  height: 40px;
+  background: var(--mc-bg-inset);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.3);
+}
+
+.mc-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mc-text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mc-item__sub {
+  font-size: 12px;
+  color: var(--mc-text-soft);
+}
+
+/* ——————————————————————————————————
+   16. 工具提示（悬浮提示气泡）
+   —————————————————————————————————— */
+.mc-tooltip {
+  position: relative;
+}
+
+.mc-tooltip__text {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--mc-obsidian);
+  color: #fff;
+  font-family: var(--mc-font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-radius: var(--mc-radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 120ms, visibility 120ms;
+  z-index: 100;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.mc-tooltip__text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--mc-obsidian);
+}
+
+.mc-tooltip:hover .mc-tooltip__text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ——————————————————————————————————
+   17. 加载状态（像素块脉冲）
+   —————————————————————————————————— */
+.mc-loader {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mc-loader__block {
+  width: 10px;
+  height: 10px;
+  background: var(--mc-grass);
+  border-radius: 2px;
+  animation: mc-pulse 1.2s ease-in-out infinite;
+  box-shadow: inset 0 -2px 0 var(--mc-grass-dark);
+}
+
+.mc-loader__block:nth-child(2) { animation-delay: 0.2s; background: var(--mc-gold); box-shadow: inset 0 -2px 0 #C8A000; }
+.mc-loader__block:nth-child(3) { animation-delay: 0.4s; background: var(--mc-diamond); box-shadow: inset 0 -2px 0 #26A69A; }
+
+@keyframes mc-pulse {
+  0%, 80%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+  40%            { transform: scaleY(1.0); opacity: 1; }
+}
+
+/* ——————————————————————————————————
+   18. 空状态（像素块插图风格）
+   —————————————————————————————————— */
+.mc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 12px;
+}
+
+.mc-empty__icon {
+  font-size: 48px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.mc-empty__title {
+  font-family: var(--mc-font-pixel);
+  font-size: 12px;
+  color: var(--mc-text-soft);
+  letter-spacing: 0.04em;
+}
+
+.mc-empty__sub {
+  font-size: 13px;
+  color: var(--mc-text-muted);
+  max-width: 240px;
+}
+
+/* ——————————————————————————————————
+   19. 导航标签页（草方块风格）
+   —————————————————————————————————— */
+.mc-tabs {
+  display: flex;
+  background: var(--mc-bg-inset);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  padding: 4px;
+  gap: 2px;
+}
+
+.mc-tab {
+  flex: 1;
+  font-family: var(--mc-font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--mc-text-soft);
+  border: none;
+  border-radius: var(--mc-radius-md);
+  cursor: pointer;
+  transition: background 120ms, color 120ms, box-shadow 120ms;
+  text-align: center;
+}
+
+.mc-tab:hover {
+  background: rgba(93, 140, 62, 0.1);
+  color: var(--mc-grass-dark);
+}
+
+.mc-tab--active {
+  background: var(--mc-grass);
+  color: #fff;
+  box-shadow:
+    inset 0 -3px 0 var(--mc-grass-dark),
+    var(--mc-shadow-sm);
+  text-shadow: 1px 1px 0 var(--mc-grass-dark);
+}
+
+/* ——————————————————————————————————
+   20. 复选框（像素风格）
+   —————————————————————————————————— */
+.mc-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mc-checkbox__box {
+  width: 20px;
+  height: 20px;
+  background: var(--mc-bg-elev);
+  border: 2px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms, border-color 120ms;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: transparent;
+}
+
+.mc-checkbox:hover .mc-checkbox__box {
+  border-color: var(--mc-primary);
+}
+
+.mc-checkbox--checked .mc-checkbox__box {
+  background: var(--mc-primary);
+  border-color: var(--mc-primary-dark);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 var(--mc-primary-dark);
+}
+
+/* ——————————————————————————————————
+   21. 滑动条（像素进度条风格）
+   —————————————————————————————————— */
+.mc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  background: var(--mc-bg-inset);
+  border: 2px solid var(--mc-border);
+  border-radius: var(--mc-radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.mc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--mc-grass);
+  border: 2px solid var(--mc-grass-dark);
+  border-radius: var(--mc-radius-sm);
+  cursor: grab;
+  box-shadow: var(--mc-shadow-sm);
+  transition: transform 80ms;
+}
+
+.mc-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.mc-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+/* ——————————————————————————————————
+   22. 通知 Toast（Creeper 绿弹出）
+   —————————————————————————————————— */
+.mc-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--mc-obsidian);
+  color: #fff;
+  font-family: var(--mc-font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 12px 20px;
+  border-radius: var(--mc-radius-lg);
+  border: 2px solid var(--mc-grass);
+  box-shadow:
+    4px 4px 0 rgba(0,0,0,0.3),
+    0 0 0 2px var(--mc-primary-glow);
+  z-index: 999;
+  animation: mc-toast-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes mc-toast-in {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+
+/* ——————————————————————————————————
+   23. 骨架屏（像素块加载占位）
+   —————————————————————————————————— */
+.mc-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--mc-bg-inset) 0%,
+    var(--mc-bg-elev) 50%,
+    var(--mc-bg-inset) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--mc-radius-sm);
+  animation: mc-shimmer 1.5s ease-in-out infinite;
+  border: 1px solid var(--mc-border);
+}
+
+@keyframes mc-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ——————————————————————————————————
+   24. 角标（钻石数/等级徽章）
+   —————————————————————————————————— */
+.mc-rare-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: var(--mc-font-pixel);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mc-rare-badge--common {
+  background: var(--mc-bg-inset);
+  color: var(--mc-text-soft);
+  border: 1px solid var(--mc-border);
+}
+
+.mc-rare-badge--uncommon {
+  background: rgba(80, 200, 120, 0.15);
+  color: var(--mc-grass-dark);
+  border: 1px solid var(--mc-grass);
+}
+
+.mc-rare-badge--rare {
+  background: rgba(77, 208, 225, 0.15);
+  color: #1A7A8A;
+  border: 1px solid var(--mc-diamond);
+}
+
+.mc-rare-badge--epic {
+  background: rgba(156, 39, 176, 0.15);
+  color: #7B1FA2;
+  border: 1px solid #9C27B0;
+}
+
+.mc-rare-badge--legendary {
+  background: rgba(255, 215, 0, 0.2);
+  color: #C8A000;
+  border: 1px solid var(--mc-gold);
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+}
+
+/* ——————————————————————————————————
+   25. 夜间模式（Minecraft 末地风格）
+   27 节已强制 mc 主题始终使用末地暗色板，这里留空避免冲突
+   —————————————————————————————————— */
+
+/* ——————————————————————————————————
+   26. 响应式工具
+   —————————————————————————————————— */
+@media (max-width: 640px) {
+  .mc-btn {
+    padding: 9px 16px;
+    font-size: 11px;
+  }
+  .mc-card {
+    padding: 14px;
+  }
+  .mc-modal {
+    border-radius: var(--mc-radius-md);
+  }
+}
+
+/* ——————————————————————————————————
+   27. 主题切换：精准命中实际 DOM 类名（Minecraft 视觉）
+   主题调色板已在 :root 上方定义。下面的样式仅在 body.mc-theme--system 激活时生效。
+   —————————————————————————————————— */
+
+/* — 日期头部：羊皮纸 + 像素块阴影 — */
+body.mc-theme--system .date-header {
+  background: var(--mc-bg);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-md);
+  border-radius: var(--mc-radius-lg);
+}
+body.mc-theme--system .date-header__title,
+body.mc-theme--system .date-header__day-num {
+  color: var(--mc-text);
+  font-family: var(--mc-font-pixel);
+  letter-spacing: 0.5px;
+}
+body.mc-theme--system .date-header__lunar {
+  color: var(--mc-dirt);
+}
+body.mc-theme--system .date-header__weather {
+  color: var(--mc-text-muted);
+}
+body.mc-theme--system .date-header__nav-btn {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-sm);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .date-header__nav-btn:hover {
+  background: var(--mc-grass-light);
+  color: #fff;
+}
+
+/* — 主容器 — */
+body.mc-theme--system .app-main {
+  background: var(--mc-bg);
+}
+
+/* — 视图切换标签（草方块按钮）— */
+body.mc-theme--system .view-tabs {
+  background: var(--mc-bg-soft);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  box-shadow: var(--mc-shadow-md);
+  padding: 8px;
+  gap: 8px;
+}
+body.mc-theme--system .view-tabs__btn {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text-soft);
+  border-radius: var(--mc-radius-sm);
+  box-shadow: var(--mc-shadow-sm);
+}
+body.mc-theme--system .view-tabs__btn:hover:not(.is-active) {
+  background: var(--mc-bg-soft);
+  color: var(--mc-text);
+}
+body.mc-theme--system .view-tabs__btn.is-active {
+  background: var(--mc-grass);
+  color: #fff;
+  border-color: var(--mc-grass-dark);
+  box-shadow:
+    inset 0 2px 0 var(--mc-grass-light),
+    inset 0 -2px 0 var(--mc-grass-dark);
+}
+body.mc-theme--system .view-tabs__btn.is-active .view-tabs__hint,
+body.mc-theme--system .view-tabs__btn.is-active .view-tabs__icon,
+body.mc-theme--system .view-tabs__btn.is-active .view-tabs__label {
+  color: #fff;
+}
+body.mc-theme--system .view-tabs__label {
+  font-family: var(--mc-font-pixel);
+}
+
+/* — 时间轴（泥土色格子）— */
+body.mc-theme--system .timeline {
+  background: var(--mc-bg);
+}
+body.mc-theme--system .timeline__hour {
+  color: var(--mc-dirt);
+  border-color: var(--mc-border);
+  font-family: var(--mc-font-pixel);
+}
+body.mc-theme--system .timeline__now-line {
+  background: var(--mc-redstone);
+  box-shadow: 0 0 4px var(--mc-redstone);
+}
+body.mc-theme--system .timeline__event {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-sm);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .timeline__event:hover {
+  border-color: var(--mc-primary);
+  box-shadow: var(--mc-shadow-md);
+}
+body.mc-theme--system .timeline__event.is-current-day {
+  border-color: var(--mc-primary);
+}
+
+/* — 日历（月视图）— */
+body.mc-theme--system .event-calendar {
+  background: var(--mc-bg);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  box-shadow: var(--mc-shadow-md);
+}
+body.mc-theme--system .event-calendar__header {
+  background: var(--mc-grass);
+  border: 1px solid var(--mc-grass-dark);
+  color: #fff;
+  font-family: var(--mc-font-pixel);
+}
+body.mc-theme--system .event-calendar__weekday {
+  color: #fff;
+  opacity: 0.9;
+}
+body.mc-theme--system .event-calendar__day {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+}
+body.mc-theme--system .event-calendar__day.is-today {
+  background: var(--mc-gold);
+  color: var(--mc-text);
+  font-weight: 700;
+}
+body.mc-theme--system .event-calendar__day.is-selected {
+  border-color: var(--mc-primary);
+  box-shadow: 0 0 0 2px var(--mc-primary-glow);
+}
+
+/* — 日程项 — */
+body.mc-theme--system .event-list {
+  background: var(--mc-bg);
+}
+body.mc-theme--system .event-list__date-group {
+  color: var(--mc-dirt);
+  border-color: var(--mc-border);
+  font-family: var(--mc-font-pixel);
+}
+body.mc-theme--system .event-item {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-sm);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .event-item:hover {
+  border-color: var(--mc-primary);
+  box-shadow: var(--mc-shadow-md);
+}
+
+/* — 待办（工作台风格）— */
+body.mc-theme--system .todo-board {
+  background: var(--mc-bg);
+}
+body.mc-theme--system .todo-list {
+  background: var(--mc-bg-soft);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-md);
+  box-shadow: var(--mc-shadow-md);
+}
+body.mc-theme--system .todo-item {
+  color: var(--mc-text);
+  border-bottom-color: var(--mc-border);
+}
+body.mc-theme--system .todo-checkbox {
+  border-color: var(--mc-border-strong);
+  background: var(--mc-bg-elev);
+}
+body.mc-theme--system .todo-checkbox.is-checked {
+  background: var(--mc-primary);
+  border-color: var(--mc-primary-dark);
+}
+
+/* — Logo（像素字）— */
+body.mc-theme--system .logo__title {
+  color: var(--mc-grass-dark);
+  font-family: var(--mc-font-pixel);
+}
+body.mc-theme--system .logo__subtitle {
+  color: var(--mc-dirt);
+}
+
+/* — 通用按钮（钻石蓝）— */
+body.mc-theme--system .btn {
+  background: var(--mc-primary);
+  border: 1px solid var(--mc-primary-dark);
+  color: #fff;
+  box-shadow: var(--mc-shadow-sm);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .btn:hover {
+  background: var(--mc-primary-dark);
+}
+body.mc-theme--system .btn--secondary {
+  background: var(--mc-bg-soft);
+  border-color: var(--mc-border-strong);
+  color: var(--mc-text);
+}
+
+/* — 弹窗通用（木箱风格）— */
+body.mc-theme--system .settings-modal,
+body.mc-theme--system .diary-modal,
+body.mc-theme--system .batch-export,
+body.mc-theme--system .task-decomposer-modal {
+  background: var(--mc-bg-elev);
+  border: 2px solid var(--mc-dirt);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-lg);
+  border-radius: var(--mc-radius-md);
+}
+body.mc-theme--system .settings-modal__backdrop,
+body.mc-theme--system .diary-modal__backdrop,
+body.mc-theme--system .batch-export__backdrop {
+  background: rgba(26, 26, 46, 0.75);
+}
+body.mc-theme--system .settings-modal__head,
+body.mc-theme--system .diary-modal__head {
+  background: var(--mc-dirt);
+  border-bottom: 2px solid var(--mc-dirt-dark);
+  color: #fff;
+}
+body.mc-theme--system .settings-modal__section-title {
+  color: var(--mc-text);
+  font-family: var(--mc-font-pixel);
+}
+body.mc-theme--system .settings-modal__divider {
+  background: var(--mc-border);
+}
+body.mc-theme--system .settings-modal__theme-btn {
+  background: var(--mc-bg-soft);
+  border: 1px solid var(--mc-border-strong);
+  color: var(--mc-text-soft);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .settings-modal__theme-btn.is-active {
+  background: var(--mc-grass);
+  border-color: var(--mc-grass-dark);
+  color: #fff;
+}
+body.mc-theme--system .settings-modal__upload-btn {
+  background: var(--mc-diamond);
+  border-color: var(--mc-lapis);
+  color: var(--mc-text);
+}
+body.mc-theme--system .settings-modal__hint {
+  color: var(--mc-text-muted);
+}
+body.mc-theme--system .settings-modal__track {
+  background: var(--mc-bg);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+  border-radius: var(--mc-radius-sm);
+}
+body.mc-theme--system .settings-modal__empty,
+body.mc-theme--system .settings-modal__loading {
+  color: var(--mc-text-muted);
+}
+
+/* — 图例 — */
+body.mc-theme--system .legend {
+  background: var(--mc-bg-soft);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text-soft);
+  border-radius: var(--mc-radius-sm);
+}
+
+/* — Toast — */
+body.mc-theme--system .accepted-toast {
+  background: var(--mc-bg-elev);
+  border: 1px solid var(--mc-primary);
+  color: var(--mc-text);
+  box-shadow: var(--mc-shadow-md);
+}
+
+/* — 优先级色块 — */
+body.mc-theme--system .priority-tag--p1,
+body.mc-theme--system [class*="priority"][class*="p1"] {
+  background: var(--mc-p1-bg) !important;
+  color: var(--mc-p1-text) !important;
+  border-color: var(--mc-p1-border) !important;
+}
+body.mc-theme--system .priority-tag--p2,
+body.mc-theme--system [class*="priority"][class*="p2"] {
+  background: var(--mc-p2-bg) !important;
+  color: var(--mc-p2-text) !important;
+  border-color: var(--mc-p2-border) !important;
+}
+body.mc-theme--system .priority-tag--p3,
+body.mc-theme--system [class*="priority"][class*="p3"] {
+  background: var(--mc-p3-bg) !important;
+  color: var(--mc-p3-text) !important;
+  border-color: var(--mc-p3-border) !important;
+}
+

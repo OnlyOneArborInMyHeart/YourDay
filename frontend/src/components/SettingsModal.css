@@ -43,7 +43,7 @@
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.06), transparent);
+  background: linear-gradient(180deg, var(--color-primary-soft), transparent);
 }
 .settings-modal__title {
   margin: 0;
@@ -94,7 +94,7 @@
   padding: 10px 18px;
   border-radius: 999px;
   border: 1px solid transparent;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -279,19 +279,20 @@
   white-space: nowrap;
 }
 .settings-modal__lyrics-btn:hover {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
-  border-color: rgba(99, 102, 241, 0.55);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 .settings-modal__lyrics-btn--has {
-  background: rgba(99, 102, 241, 0.14);
-  color: #a5b4fc;
-  border-color: rgba(99, 102, 241, 0.5);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 .settings-modal__lyrics-btn--has:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.5);
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
 }
 .settings-modal__btn {
   flex: 0 0 auto;
@@ -372,4 +373,66 @@
   opacity: 0.9;
   text-align: center;
   margin-top: 4px;
+}
+
+/* —— 换肤区域 —— */
+.settings-modal__section {
+  padding: 16px 20px;
+}
+
+.settings-modal__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+.settings-modal__divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 20px;
+}
+
+.settings-modal__theme-options {
+  display: flex;
+  gap: 10px;
+}
+
+.settings-modal__theme-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color 120ms, box-shadow 120ms, transform 80ms;
+}
+
+.settings-modal__theme-btn:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.settings-modal__theme-btn.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), var(--shadow-sm);
+}
+
+.settings-modal__theme-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.settings-modal__theme-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
 }

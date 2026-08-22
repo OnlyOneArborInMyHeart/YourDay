@@ -117,11 +117,21 @@
     content: '';
     position: absolute;
     inset: 0;
+    /* default 主题：白色蒙版 */
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.78) 0%,
-        rgba(255, 255, 255, 0.55) 55%,
-        rgba(255, 255, 255, 0.25) 100%
+        rgba(255, 255, 255, 0.85) 0%,
+        rgba(255, 255, 255, 0.65) 55%,
+        transparent 100%
+    );
+}
+/* mc 主题：换成深色蒙版 */
+body.mc-theme--system .todo-item__bg::after {
+    background: linear-gradient(
+        90deg,
+        var(--color-bg-elev) 0%,
+        color-mix(in srgb, var(--color-bg-elev) 70%, transparent) 55%,
+        transparent 100%
     );
 }
 .todo-item.has-bg {
@@ -137,6 +147,12 @@
 .todo-item.has-bg .todo-item__time,
 .todo-item.has-bg .todo-item__note {
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7), 0 0 6px rgba(255, 255, 255, 0.5);
+}
+/* mc 主题：白色阴影改为深色 */
+body.mc-theme--system .todo-item.has-bg .todo-item__title,
+body.mc-theme--system .todo-item.has-bg .todo-item__time,
+body.mc-theme--system .todo-item.has-bg .todo-item__note {
+    text-shadow: 0 1px 2px var(--color-bg-elev), 0 0 6px var(--color-bg-elev);
 }
 .todo-item__completed {
     display: inline-block;

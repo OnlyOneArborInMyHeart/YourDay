@@ -25,7 +25,7 @@
   letter-spacing: 1px;
   color: var(--color-text);
   text-align: center;
-  background: linear-gradient(135deg, #1f2937 0%, #4f52e0 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -112,18 +112,18 @@
   box-shadow: 0 0 0 2px rgba(71, 117, 255, 0.35);
 }
 .cal-cell:hover {
-  background: #f3f4f8;
+  background: var(--color-bg-soft);
 }
 .cal-cell.is-out {
   opacity: 0.35;
 }
 .cal-cell.is-today {
-  background: linear-gradient(180deg, #eef4ff 0%, #f3f4f8 100%);
+  background: var(--color-primary-soft);
 }
 .cal-cell.is-selected {
   border-color: var(--color-primary);
   box-shadow: 0 6px 14px -8px rgba(71, 117, 255, 0.55);
-  background: #fafbff;
+  background: var(--color-primary-soft);
 }
 
 .cal-cell__head {
@@ -234,7 +234,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   background: transparent;
-  color: #cbd5e1;
+  color: var(--color-text-muted);
   border: 1px dashed transparent;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -384,9 +384,9 @@
 
 /* 过去日单元格里的"已完成"事项预览：更柔的视觉（淡灰底 + 勾号） */
 .cal-cell__event--archived {
-  background: #f1f5f9;
-  border-left-color: #cbd5e1;
-  color: #475569;
+  background: var(--color-bg-soft);
+  border-left-color: var(--color-border-strong);
+  color: var(--color-text-muted);
   text-decoration: line-through;
   text-decoration-color: rgba(71, 85, 105, 0.45);
   text-decoration-thickness: 1px;
@@ -409,14 +409,14 @@
 
 /* 过去日单元格：阳历数字减淡、背景略灰，让归档列表成为视觉焦点 */
 .cal-cell.is-past {
-  background: #f8fafc;
+  background: var(--color-bg-soft);
 }
 .cal-cell.is-past .cal-cell__day {
   color: #94a3b8;
   font-weight: 500;
 }
 .cal-cell.is-past:hover {
-  background: #f1f5f9;
+  background: var(--color-bg-inset);
 }
 
 /* 时间任务中的"无时间任务"（isTodo=true）：不打时间戳，居中显示标题 */
@@ -564,8 +564,8 @@
 /* 归档详情行（过去日"已完成"）：背景更柔、标题加删除线、不可点击编辑 */
 .cal-event-row--archived {
   cursor: default;
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: var(--color-bg-soft);
+  border-color: var(--color-border);
 }
 .cal-event-row--archived.cal-event-row--p1 {
   background: #fdf2f4;
@@ -615,7 +615,7 @@
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #f8faff 0%, #f1f4ff 100%);
+  background: var(--color-primary-soft);
   border: 1px dashed var(--color-border-strong);
   color: var(--color-text-muted);
   font-family: inherit;
@@ -623,7 +623,7 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .diary-prompt.has-value {
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  background: var(--color-primary-soft);
   border-style: solid;
   border-color: #c7d2fe;
   color: var(--color-text);

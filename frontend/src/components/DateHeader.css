@@ -145,8 +145,8 @@
 }
 
 .date-header__today-btn.is-today {
-    background: linear-gradient(135deg, #eef2ff 0%, #ddd6fe 100%);
-    color: #4f46e5;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
     border-color: #c7d2fe;
     font-weight: 600;
 }
@@ -178,7 +178,7 @@
     letter-spacing: 0.5px;
     white-space: nowrap;
     text-align: center;
-    background: linear-gradient(135deg, #1f2937 0%, #4f52e0 100%);
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -241,7 +241,7 @@
 }
 
 .date-header__meta-chip:hover {
-    background: #fff;
+    background: var(--color-bg-elev);
     color: var(--color-text);
     border-color: var(--color-border-strong);
 }
@@ -304,8 +304,8 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text);
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    border: 1px solid #c4b5fd;
+    background: var(--color-primary-soft);
+    border: 1px solid var(--color-primary);
     border-radius: 999px;
     padding: 5px 14px;
     white-space: nowrap;
@@ -350,7 +350,7 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text);
-    background: #fff;
+    background: var(--color-bg-elev);
     border: 1px solid var(--color-primary);
     border-radius: 999px;
     padding: 5px 14px;

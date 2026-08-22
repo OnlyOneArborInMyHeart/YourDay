@@ -61,7 +61,7 @@
   border-radius: 6px;
   padding: 5px 8px;
   font-size: 13px;
-  background: #fff;
+  background: var(--color-bg-elev);
   transition: border-color 0.15s;
 }
 

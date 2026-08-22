@@ -35,12 +35,11 @@
 }
 
 .view-tabs__btn.is-active {
-  background: linear-gradient(180deg, #f4f6ff 0%, #e9eeff 100%);
+  background: var(--color-bg-soft);
   color: var(--color-primary);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 0 0 1px var(--color-primary) inset,
-    0 6px 14px -8px rgba(99, 102, 241, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px var(--color-primary);
 }
 
 .view-tabs__btn:active {

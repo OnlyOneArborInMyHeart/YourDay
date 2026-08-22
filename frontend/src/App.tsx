@@ -1,4 +1,5 @@
 import './App.css';
+import './styles/minecraft-theme.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DateHeader } from './components/DateHeader';
 import { EventCalendar } from './components/EventCalendar';
@@ -33,6 +34,17 @@ const LIST_WINDOW_DAYS = 7;
 export default function App() {
   const [date, setDate] = useState<string>(toDateString(new Date()));
   const [view, setView] = useState<ViewMode>('timeline');
+
+  /** 当前皮肤：'default' | 'minecraft'，持久化到 localStorage */
+  const [themeMode, setThemeMode] = useState<'default' | 'minecraft'>(() => {
+    return (localStorage.getItem('yd-theme') as 'default' | 'minecraft') ?? 'default';
+  });
+
+  /** 同步皮肤到 <body> class，供 CSS 选择器使用 */
+  useEffect(() => {
+    document.body.className = themeMode === 'minecraft' ? 'mc-theme--system mc-body' : '';
+    localStorage.setItem('yd-theme', themeMode);
+  }, [themeMode]);
   // 当日主题缓存：date -> title，与日历界面联动（共享同一份数据）
   // 切换到不同视图时按需填充对应范围，避免不必要的请求
   const [themeCache, setThemeCache] = useState<Record<string, string>>({});
@@ -597,6 +609,8 @@ export default function App() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        themeMode={themeMode}
+        onThemeModeChange={setThemeMode}
         library={musicLibrary}
         onLibraryChange={handleLibraryChange}
       />
