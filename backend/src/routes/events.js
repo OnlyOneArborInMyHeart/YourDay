@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { carryOverTickIfNewDay } from '../carryover.js';
+import { archiveCompletedToYesterdayIfNewDay } from '../diaryArchive.js';
 
 const router = Router();
 
@@ -91,6 +92,8 @@ router.get('/', (req, res) => {
 
   // 顺手做一次跨日顺延（每天首次请求 events 时执行一次；同一天不会重复跑）
   carryOverTickIfNewDay();
+  // 同一天第一次拉 events 时也顺手归档"昨日已完成"到对应日记末尾
+  archiveCompletedToYesterdayIfNewDay();
 
   let rows;
   if (date) {

@@ -12,6 +12,7 @@ import eventBackgroundsRouter from './routes/eventBackgrounds.js';
 import todoAttachmentsRouter from './routes/todoAttachments.js';
 import musicRouter from './routes/music.js';
 import { startCarryOverScheduler, runCarryOverNow } from './carryover.js';
+import { runArchiveNow, archiveCompletedToYesterdayIfNewDay } from './diaryArchive.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +95,8 @@ app.listen(PORT, () => {
   console.log(`YourDay API 已启动 → http://localhost:${PORT}`);
   // 启动时立即跑一次跨日顺延（兜底：服务器刚启动就跨了多天）
   runCarryOverNow('startup');
+  // 启动时也跑一次"昨日已完成"归档（兜底：重启瞬间跨过午夜）
+  runArchiveNow('startup');
   // 启动每日 0 点的定时任务
   startCarryOverScheduler();
 });

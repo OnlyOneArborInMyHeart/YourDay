@@ -171,6 +171,19 @@ db.exec(`
   );
 `);
 
+// 已完成事项归档日志：防止 tick 重复触发 / 进程重启等场景下把同一条事项多次写入日记。
+// PK=(date, kind, item_id)：date = 要写入的日记日期（即事项"完成日"）；同一条事项只归档一次。
+db.exec(`
+  CREATE TABLE IF NOT EXISTS diary_archive_log (
+    date        TEXT    NOT NULL,
+    kind        TEXT    NOT NULL CHECK(kind IN ('todo','event')),
+    item_id     INTEGER NOT NULL,
+    archived_at TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+    PRIMARY KEY (date, kind, item_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_diary_archive_log_date ON diary_archive_log(date);
+`);
+
 // 兼容旧库：把 day_themes.title 拷到 diary_entries.title（一次性）
 const themeRows = db.prepare('SELECT date, title FROM day_themes').all();
 const insertDiary = db.prepare(
