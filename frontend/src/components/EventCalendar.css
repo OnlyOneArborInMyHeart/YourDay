@@ -96,7 +96,8 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   padding: 6px 8px 8px;
-  min-height: 96px;
+  min-height: 120px;
+  min-width: 0;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -128,13 +129,29 @@
 .cal-cell__head {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   margin-bottom: 4px;
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  min-height: 18px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.cal-cell__head-primary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1;
+}
+
+.cal-cell__head-secondary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .cal-cell__day {
@@ -222,6 +239,8 @@
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   flex-shrink: 1;
+  min-width: 0;
+  max-width: 70%;
   font-family: inherit;
 }
 .cal-cell__theme-btn:hover {
@@ -245,9 +264,58 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-height: 0;
   overflow: hidden;
+}
+
+/* 已完成归档列表：可滚动，透明细条滚动条 */
+.cal-cell__events--archived {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.cal-cell__events--archived:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.cal-cell__events--archived::-webkit-scrollbar {
+  width: 4px;
+}
+.cal-cell__events--archived::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.cal-cell__events--archived:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+.cal-cell__events--archived .cal-cell__event--archived {
+  border-radius: 0;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+  flex-shrink: 0;
+}
+.cal-cell__events--archived .cal-cell__event--archived:last-child {
+  border-bottom: none;
+}
+
+/* 单元格主体：装两段列表（已完成 + 待办），上下排列 */
+.cal-cell__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1 1 0;
+}
+.cal-cell__body > .cal-cell__events + .cal-cell__events {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--color-border);
+}
+.cal-cell__empty {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 4px 0;
+  opacity: 0.6;
 }
 
 /* 节日 / 节气 chip：紧贴数字显示 */
@@ -263,6 +331,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 1;
+  min-width: 0;
 }
 .cal-cell__tag--solar {
   background: linear-gradient(135deg, #fff1f1 0%, #ffe2e2 100%);
@@ -313,6 +382,51 @@
   border-left-color: var(--p3-bg-strong);
 }
 
+/* 过去日单元格里的"已完成"事项预览：更柔的视觉（淡灰底 + 勾号） */
+.cal-cell__event--archived {
+  background: #f1f5f9;
+  border-left-color: #cbd5e1;
+  color: #475569;
+  text-decoration: line-through;
+  text-decoration-color: rgba(71, 85, 105, 0.45);
+  text-decoration-thickness: 1px;
+}
+.cal-cell__event--archived.cal-cell__event--p1 {
+  background: #fde7e9;
+  border-left-color: #fca5a5;
+  color: #7f1d1d;
+}
+.cal-cell__event--archived.cal-cell__event--p2 {
+  background: #fef3c7;
+  border-left-color: #fcd34d;
+  color: #78350f;
+}
+.cal-cell__event-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* 过去日单元格：阳历数字减淡、背景略灰，让归档列表成为视觉焦点 */
+.cal-cell.is-past {
+  background: #f8fafc;
+}
+.cal-cell.is-past .cal-cell__day {
+  color: #94a3b8;
+  font-weight: 500;
+}
+.cal-cell.is-past:hover {
+  background: #f1f5f9;
+}
+
+/* 时间任务中的"无时间任务"（isTodo=true）：不打时间戳，居中显示标题 */
+.cal-cell__event--no-time {
+  justify-content: center;
+}
+.cal-cell__event--no-time .cal-cell__event-title {
+  text-align: center;
+}
+
 .cal-cell__event-time {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -322,12 +436,6 @@
 .cal-cell__event-title {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.cal-cell__more {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  padding: 1px 6px;
 }
 
 /* 下方选中日详情 */
@@ -361,6 +469,20 @@
   padding: 18px 0;
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+.event-calendar__selected-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-calendar__section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
 }
 
 .event-calendar__selected-list {
@@ -438,6 +560,27 @@
 .cal-event-row__chip--p1 { background: var(--p1-bg-strong); }
 .cal-event-row__chip--p2 { background: var(--p2-bg-strong); }
 .cal-event-row__chip--p3 { background: var(--p3-bg-strong); }
+
+/* 归档详情行（过去日"已完成"）：背景更柔、标题加删除线、不可点击编辑 */
+.cal-event-row--archived {
+  cursor: default;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+.cal-event-row--archived.cal-event-row--p1 {
+  background: #fdf2f4;
+  border-color: #fecaca;
+}
+.cal-event-row--archived.cal-event-row--p2 {
+  background: #fef9e7;
+  border-color: #fde68a;
+}
+.cal-event-row--archived .cal-event-row__title {
+  text-decoration: line-through;
+  text-decoration-color: rgba(100, 116, 139, 0.45);
+  text-decoration-thickness: 1px;
+  color: #475569;
+}
 
 /* 移动端：单列布局，单元格更紧凑 */
 @media (max-width: 720px) {

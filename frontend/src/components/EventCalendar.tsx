@@ -9,6 +9,7 @@ import {
   shiftMonth,
   toDateString,
 } from '../utils/date';
+import { parseDiaryArchiveBlock, type ArchivedItem } from '../utils/archive';
 import { type Diary } from '../api/diaries';
 import './EventCalendar.css';
 
@@ -84,7 +85,6 @@ export function EventCalendar({
           aria-label="上个月"
           onClick={() => {
             const next = shiftMonth(monthStart, -1);
-            // 切换月份时，停留在同一个"号"（若该月不存在则回退到 1）
             const [_, __, d] = date.split('-').map(Number);
             onSelectDate(pickDayInMonth(next, d));
           }}
@@ -92,6 +92,13 @@ export function EventCalendar({
           ‹
         </button>
         <h2 className="event-calendar__title">{formatMonthTitle(monthStart)}</h2>
+        <button
+          className="ghost-btn"
+          onClick={onBatchExport}
+          title="批量导出日记为 Markdown 文件"
+        >
+          📦 批量导出
+        </button>
         <button
           className="icon-btn"
           aria-label="下个月"
@@ -108,13 +115,6 @@ export function EventCalendar({
             回到今天
           </button>
         )}
-        <button
-          className="ghost-btn"
-          onClick={onBatchExport}
-          title="批量导出日记为 Markdown 文件"
-        >
-          📦 批量导出
-        </button>
       </header>
 
       <div className="event-calendar__weekdays">
@@ -130,13 +130,12 @@ export function EventCalendar({
 
       <div className="event-calendar__grid" role="grid" ref={gridRef}>
         {grid.map((d) => {
-          const events = (eventsByDate[d] || []).filter((e) => !e.isTodo);
           const inMonth = isSameMonth(d, monthStart);
           const isToday = d === today;
           const isSelected = d === date;
-          const sorted = [...events].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
-          const visible = sorted.slice(0, MAX_PREVIEW);
-          const overflow = sorted.length - visible.length;
+          const eventsAll = eventsByDate[d] || [];
+          // 待办 = 未完成（包括 isTodo=true 的无时间任务）
+          const todoEvents = eventsAll.filter((e) => !e.done);
           const holiday = getHolidayInfo(d);
           const diary = diaries[d];
           // 主题：与时间轴视图共享同一份"今日主题"
@@ -151,6 +150,40 @@ export function EventCalendar({
           // 仅当月格子显示农历：上下月补全格隐藏，避免视觉噪音
           const lunarLabel = inMonth ? getLunarLabel(d) : '';
 
+          // 已完成：从 diary 末尾"完成的事项 (YYYY-MM-DD)"块解析（不论过去/今天/未来均一致）。
+          // 后端 diaryArchive.js 在 done 0→1 那一刻即把对应事项写到该日的日记末尾，所以
+          // 任何日期的"今日已完成"都能直接通过日记拿到，无需前端额外拉取 todos。
+          //
+          // 但有一种例外：今天刚完成的事项在 diaryCache 里可能还未刷新（diaryCache 按月加载，
+          // 而 diary 新建后要等下次 loadMonth 才更新）。此时 eventsAll 里 done=true 的项
+          // 还没进归档块，所以再补一次兜底：从 eventsAll 中取 done=true 的项（isTodo/todo
+          // 均可），合并进 archivedItems（去重用 id+kind 判重）。
+          let archivedItems: ArchivedItem[] = parseDiaryArchiveBlock(
+            diary?.markdown_content ?? '',
+            d
+          );
+          if (d >= today) {
+            const archivedIds = new Set(archivedItems.map((a) => `${a.kind}:${a.id}`));
+            const extraDone: ArchivedItem[] = eventsAll
+              .filter((e) => e.done && !archivedIds.has(`todo:${e.id}`) && !archivedIds.has(`event:${e.id}`))
+              .map((e) => ({
+                kind: e.isTodo ? 'todo' : 'event',
+                id: e.id,
+                title: e.title,
+                startTime: e.start_time ?? null,
+                endTime: e.end_time ?? null,
+                priority: e.priority,
+              }));
+            archivedItems = [...archivedItems, ...extraDone];
+          }
+
+          // 排序：待办按时间，无时间任务靠后
+          const todoSorted = [...todoEvents].sort((a, b) =>
+            (a.start_time ?? '99:99').localeCompare(b.start_time ?? '99:99')
+          );
+          const todoVisible = todoSorted.slice(0, MAX_PREVIEW);
+          const todoOverflow = todoSorted.length - todoVisible.length;
+
           return (
             <div
               key={d}
@@ -164,6 +197,7 @@ export function EventCalendar({
                 isToday ? 'is-today' : '',
                 isSelected ? 'is-selected' : '',
                 hasDiary ? 'has-diary' : '',
+                d < today ? 'is-past' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
@@ -212,25 +246,45 @@ export function EventCalendar({
                 </button>
                 {isToday && <span className="cal-cell__today-dot" aria-hidden />}
               </div>
-              <ul className="cal-cell__events">
-                {visible.map((e) => (
-                  <li
-                    key={e.id}
-                    className={`cal-cell__event cal-cell__event--p${e.priority}`}
-                    onClick={(ev) => {
-                      ev.stopPropagation();
-                      onSelectEvent(e);
-                    }}
-                    title={`${e.start_time} · ${e.title}`}
-                  >
-                    <span className="cal-cell__event-time">{e.start_time}</span>
-                    <span className="cal-cell__event-title">{e.title}</span>
-                  </li>
-                ))}
-                {overflow > 0 && (
-                  <li className="cal-cell__more">+ {overflow} 项</li>
+              <div className="cal-cell__body">
+                {todoVisible.length > 0 && (
+                  <ul className="cal-cell__events cal-cell__events--todos">
+                    {todoVisible.map((e) => (
+                      <li
+                        key={e.id}
+                        className={`cal-cell__event cal-cell__event--p${e.priority}`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          onSelectEvent(e);
+                        }}
+                        title={`${e.start_time ?? ''} ${e.start_time ? '·' : ''} ${e.title}`}
+                      >
+                        {e.isTodo ? (
+                          <span className="cal-cell__event-title">{e.title}</span>
+                        ) : (
+                          <>
+                            <span className="cal-cell__event-time">{e.start_time}</span>
+                            <span className="cal-cell__event-title">{e.title}</span>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                    {todoOverflow > 0 && (
+                      <li className="cal-cell__more">+ {todoOverflow} 项待办</li>
+                    )}
+                  </ul>
                 )}
-              </ul>
+                {archivedItems.length > 0 && (
+                  <ul className="cal-cell__events cal-cell__events--archived">
+                    {archivedItems.map((item) => (
+                      <ArchivedRow key={`a-${item.kind}-${item.id}`} item={item} />
+                    ))}
+                  </ul>
+                )}
+                {archivedItems.length === 0 && todoVisible.length === 0 && (
+                  <div className="cal-cell__empty">无事项</div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -240,7 +294,11 @@ export function EventCalendar({
         <div className="event-calendar__selected-head">
           <span className="event-calendar__selected-label">{date}</span>
           <span className="event-calendar__selected-count">
-            {(eventsByDate[date] || []).length} 项待办
+            {(() => {
+              const arch = parseDiaryArchiveBlock(diaries[date]?.markdown_content ?? '', date);
+              const todo = (eventsByDate[date] || []).filter((e) => !e.done);
+              return `已完成 ${arch.length} · 待办 ${todo.length}`;
+            })()}
           </span>
         </div>
           <DiaryEntry
@@ -248,29 +306,53 @@ export function EventCalendar({
             theme={themeCache[date]}
             onOpen={() => onOpenDiary(date)}
           />
-        {(eventsByDate[date] || []).length === 0 ? (
-          <div className="event-calendar__selected-empty">点击右侧 + 新建事项 · 这一天空空如也</div>
-        ) : (
-          <ul className="event-calendar__selected-list">
-            {[...(eventsByDate[date] || [])]
-              .filter((e) => !e.isTodo)
-              .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
-              .map((e) => (
-                <li
-                  key={e.id}
-                  className={`cal-event-row cal-event-row--p${e.priority}`}
-                  onClick={() => onSelectEvent(e)}
-                >
-                  <span className="cal-event-row__time">{e.start_time}</span>
-                  <span className="cal-event-row__title">{e.title}</span>
-                  {e.note && <span className="cal-event-row__note">{e.note}</span>}
-                  <span className={`cal-event-row__chip cal-event-row__chip--p${e.priority}`}>
-                    P{e.priority}
-                  </span>
-                </li>
-              ))}
-          </ul>
-        )}
+        {(() => {
+          const arch = parseDiaryArchiveBlock(diaries[date]?.markdown_content ?? '', date);
+          const todoEvents = (eventsByDate[date] || []).filter((e) => !e.done);
+          const todoSorted = [...todoEvents].sort((a, b) =>
+            (a.start_time ?? '99:99').localeCompare(b.start_time ?? '99:99')
+          );
+          if (arch.length === 0 && todoSorted.length === 0) {
+            return (
+              <div className="event-calendar__selected-empty">点击右侧 + 新建事项 · 这一天空空如也</div>
+            );
+          }
+          return (
+            <>
+              {arch.length > 0 && (
+                <section className="event-calendar__selected-section">
+                  <h4 className="event-calendar__section-title">已完成</h4>
+                  <ul className="event-calendar__selected-list">
+                    {arch.map((item) => (
+                      <ArchivedDetailRow key={`a-${item.kind}-${item.id}`} item={item} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {todoSorted.length > 0 && (
+                <section className="event-calendar__selected-section">
+                  <h4 className="event-calendar__section-title">待办</h4>
+                  <ul className="event-calendar__selected-list">
+                    {todoSorted.map((e) => (
+                      <li
+                        key={e.id}
+                        className={`cal-event-row cal-event-row--p${e.priority}`}
+                        onClick={() => onSelectEvent(e)}
+                      >
+                        <span className="cal-event-row__time">{e.start_time ?? '—'}</span>
+                        <span className="cal-event-row__title">{e.title}</span>
+                        {e.note && <span className="cal-event-row__note">{e.note}</span>}
+                        <span className={`cal-event-row__chip cal-event-row__chip--p${e.priority}`}>
+                          P{e.priority}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
@@ -336,4 +418,50 @@ function pickDayInMonth(monthFirst: string, day: number): string {
   const last = new Date(y, m, 0).getDate();
   const safe = Math.min(Math.max(day, 1), last);
   return `${y}-${String(m).padStart(2, '0')}-${String(safe).padStart(2, '0')}`;
+}
+
+/**
+ * 过去日单元格里的"已完成"事项预览：
+ * - 用更柔的颜色（淡灰）传递"已完成"语义
+ * - 与时间任务区分：归档项首列不打时间戳（归档行的元数据已写在 meta 注释里）
+ */
+function ArchivedRow({ item }: { item: ArchivedItem }) {
+  const isEvent = item.kind === 'event';
+  const time = isEvent && item.startTime
+    ? item.endTime
+      ? `${item.startTime}–${item.endTime}`
+      : `起 ${item.startTime}`
+    : '';
+  return (
+    <li
+      className={`cal-cell__event cal-cell__event--archived cal-cell__event--p${item.priority}`}
+      title={time ? `${time} · ${item.title}` : item.title}
+    >
+      <span className="cal-cell__event-icon" aria-hidden>✓</span>
+      <span className="cal-cell__event-title">{item.title}</span>
+    </li>
+  );
+}
+
+/**
+ * 过去日选中详情里的"已完成"事项：保持与时间任务一致的卡片样式，
+ * 时间列显示归档时记录的 HH:MM–HH:MM；不可编辑（已锁）。
+ */
+function ArchivedDetailRow({ item }: { item: ArchivedItem }) {
+  const isEvent = item.kind === 'event';
+  const time = isEvent && item.startTime
+    ? item.endTime
+      ? `${item.startTime}–${item.endTime}`
+      : `起 ${item.startTime}`
+    : '—';
+  return (
+    <li className={`cal-event-row cal-event-row--archived cal-event-row--p${item.priority}`}>
+      <span className="cal-event-row__time">{time}</span>
+      <span className="cal-event-row__title">{item.title}</span>
+      <span className="cal-event-row__note">{isEvent ? '事件' : '待办'} · 已归档</span>
+      <span className={`cal-event-row__chip cal-event-row__chip--p${item.priority}`}>
+        P{item.priority}
+      </span>
+    </li>
+  );
 }

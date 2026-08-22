@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import db from '../db.js';
+import { archiveSingleTodoNow, unarchiveSingleTodo } from '../diaryArchive.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -262,6 +263,24 @@ router.put('/:id', (req, res) => {
     WHERE id=@id
   `).run({ id: req.params.id, ...merged });
 
+  // done 0→1 那一刻立刻把这一项归档到"完成日"对应日记末尾（顶级）
+  // 顶级判定由 archiveSingleTodoNow 内部 WHERE parent_id IS NULL 处理
+  if (!existing.done && merged.done === 1) {
+    try {
+      archiveSingleTodoNow(Number(req.params.id));
+    } catch (err) {
+      console.warn('[diary-archive] 即时归档 todo 失败（不影响主流程）', err);
+    }
+  }
+  // done 1→0：撤回对应归档
+  if (existing.done && merged.done === 0) {
+    try {
+      unarchiveSingleTodo(Number(req.params.id));
+    } catch (err) {
+      console.warn('[diary-archive] 反归档 todo 失败（不影响主流程）', err);
+    }
+  }
+
   // 回收孤儿图片：编辑前后，本 todo 不再引用的图片，且其他 todo 也不再引用 → 删除
   try {
     const oldIds = new Set(extractTodoImgIds(existing.note ?? ''));
@@ -302,6 +321,19 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'todo 不存在' });
+
+  // 无论 done 状态，删除前先把日记里的归档行清掉
+  // - done=1 刚归档的：清理用户当前期望的"删除该任务"不留痕迹
+  // - done=0 但之前 done 过又取消的：清理 log + 残留归档行
+  // - 从未 done 过的：无 log 记录，unarchiveSingleTodo 返回 0，无副作用
+  try {
+    unarchiveSingleTodo(Number(req.params.id));
+  } catch (err) {
+    console.warn('[diary-archive] 删除 todo 前清理归档失败（不影响主流程）', err);
+  }
+
   const result = db.prepare('DELETE FROM todos WHERE id = ?').run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'todo 不存在' });
   res.status(204).end();
@@ -342,18 +374,39 @@ router.patch('/:id/toggle', (req, res) => {
     if (total > 0 && doneCount === total) parentShouldDone = true;
     else if (next === 0) parentShouldDone = false;
 
-    const parentNow = db.prepare('SELECT done, completed_at FROM todos WHERE id=?').get(parentId);
-    if (parentNow && parentShouldDone !== null && !!parentNow.done !== parentShouldDone) {
-      const parentExpr = parentShouldDone
-        ? "datetime('now','localtime')"
-        : 'NULL';
-      db.prepare(
-        `UPDATE todos SET done=?, completed_at=${parentExpr}, updated_at=datetime('now','localtime') WHERE id=?`
-      ).run(parentShouldDone ? 1 : 0, parentId);
-    }
+const parentNow = db.prepare('SELECT done, completed_at FROM todos WHERE id=?').get(parentId);
+  if (parentNow && parentShouldDone !== null && !!parentNow.done !== parentShouldDone) {
+    const parentExpr = parentShouldDone
+      ? "datetime('now','localtime')"
+      : 'NULL';
+    db.prepare(
+      `UPDATE todos SET done=?, completed_at=${parentExpr}, updated_at=datetime('now','localtime') WHERE id=?`
+    ).run(parentShouldDone ? 1 : 0, parentId);
   }
+}
 
-  const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+  // 即时归档：完成动作发生瞬间把这一项 / 联动的父项追加到日记末尾
+  // - 子项切到 done：归档子项本身（archiveSingleTodoNow 内 parent_id IS NULL 会跳过子项，符合预期）
+  // - 父项被联动标 done：归档父项
+  try {
+    if (!existing.done && next === 1) {
+      archiveSingleTodoNow(Number(req.params.id));
+    }
+    // done 1→0：撤回归档
+    if (existing.done && next === 0) {
+      unarchiveSingleTodo(Number(req.params.id));
+    }
+    if (existing.parent_id != null) {
+      const parentId = existing.parent_id;
+      const parentNow = db.prepare('SELECT done FROM todos WHERE id=?').get(parentId);
+      if (parentNow && parentNow.done === 1) {
+        archiveSingleTodoNow(parentId);
+      }
+    }
+  } catch (err) {
+    console.warn('[diary-archive] 即时归档 todo（toggle）失败（不影响主流程）', err);
+  }
   res.json(withNoteImages(rowToTodo(row)));
 });
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { carryOverTickIfNewDay } from '../carryover.js';
-import { archiveCompletedToYesterdayIfNewDay } from '../diaryArchive.js';
+import { archiveCompletedToYesterdayIfNewDay, archiveSingleEventNow, unarchiveSingleEvent } from '../diaryArchive.js';
 
 const router = Router();
 
@@ -154,10 +154,12 @@ router.put('/:id', (req, res) => {
   // completed_at：done 变 true → 记录时间；done 变 false → 清空；其余不变
   const incomingDone = req.body.done;
   const mergedDone = incomingDone !== undefined ? (incomingDone ? 1 : 0) : existing.done;
-  const completed_at =
+  // SQL 表达式：保持已有 completed_at（避免覆盖），否则若是 done=1 则写当下时间
+  const completed_at_expr =
     mergedDone === 1
-      ? (existing.completed_at || "datetime('now','localtime')")
-      : null;
+      ? (existing.completed_at ? 'completed_at' : "datetime('now','localtime')")
+      : 'NULL';
+  const wasDone = !!existing.done;
 
   const { errors, value } = validateEventBody({
     title: req.body.title ?? existing.title,
@@ -181,16 +183,43 @@ router.put('/:id', (req, res) => {
     SET title=@title, start_time=@start_time, end_time=@end_time,
         priority=@priority, note=@note, done=@done,
         background_image_id=@background_image_id, is_todo=@is_todo,
-        completed_at=${completed_at === null ? 'NULL' : "datetime('now','localtime')"},
+        completed_at=${completed_at_expr},
         updated_at=datetime('now','localtime')
     WHERE id=@id
   `);
   stmt.run({ id: req.params.id, ...value });
   const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  // done 0→1 那一刻立刻把这一项归档到"完成日"对应日记末尾
+  // （跨日 tick 还会兜底，但完成动作能即时反映在日历上）
+  if (!wasDone && mergedDone === 1) {
+    try {
+      archiveSingleEventNow(Number(req.params.id));
+    } catch (err) {
+      console.warn('[diary-archive] 即时归档 event 失败（不影响主流程）', err);
+    }
+  }
+  // done 1→0：把对应归档行从日记中撤回
+  if (wasDone && mergedDone === 0) {
+    try {
+      unarchiveSingleEvent(Number(req.params.id));
+    } catch (err) {
+      console.warn('[diary-archive] 反归档 event 失败（不影响主流程）', err);
+    }
+  }
   res.json(decorateWithBackground(row));
 });
 
 router.delete('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: '事件不存在' });
+
+  // 删除前清理日记归档（不论 done 状态；之前 done 过归档过的都要撤回）
+  try {
+    unarchiveSingleEvent(Number(req.params.id));
+  } catch (err) {
+    console.warn('[diary-archive] 删除 event 前清理归档失败（不影响主流程）', err);
+  }
+
   const result = db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: '事件不存在' });
   res.status(204).end();
