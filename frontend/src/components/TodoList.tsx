@@ -19,9 +19,11 @@ interface Props {
  * - 1-2 天：fresh（柔和蓝）
  * - 3-6 天：aged（琥珀）
  * - 7+  天：stale（警示红）
+ * 仅当 original_date < today（即确实被顺延过且不是今天）时显示。
  */
-function carryBadgeLevel(originalDate: string): 'fresh' | 'aged' | 'stale' {
-  const diff = Math.max(0, daysBetween(toDateString(new Date()), originalDate));
+function carryBadgeLevel(originalDate: string, todayStr: string): 'fresh' | 'aged' | 'stale' | null {
+  const diff = daysBetween(todayStr, originalDate);
+  if (diff <= 0) return null; // 今天新建或今天才顺延，不显示
   if (diff <= 2) return 'fresh';
   if (diff <= 6) return 'aged';
   return 'stale';
@@ -32,6 +34,8 @@ export function TodoList({ events, onToggleDone, onSelectEvent, onAdded, date }:
   const [addTitle, setAddTitle] = useState('');
   const [addNote, setAddNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const todayStr = toDateString(new Date());
 
   // 显示纯待办项 + 当前日带时间的日程（统一标记为待办风格）
   const todoEvents = useMemo(() => {
@@ -175,6 +179,7 @@ function TodoItem({
   onClick: () => void;
 }) {
   const dur = !event.isTodo ? durationMinutes(event.start_time as string, event.end_time as string) : null;
+  const todayStr = toDateString(new Date());
   return (
     <li
       className={`todo-item todo-item--p${event.priority} ${event.done ? 'is-done' : ''} ${
@@ -225,14 +230,18 @@ function TodoItem({
         <div className="todo-item__title">
           {event.isTodo && <span className="todo-item__todo-badge">待办</span>}
           {event.title}
-          {event.original_date && (
-            <span
-              className={`todo-item__carry-badge todo-item__carry-badge--${carryBadgeLevel(event.original_date)}`}
-              title={`原定日期：${event.original_date}`}
-            >
-              距今 {daysBetween(toDateString(new Date()), event.original_date)} 天
-            </span>
-          )}
+          {event.original_date && (() => {
+            const level = carryBadgeLevel(event.original_date, todayStr);
+            if (!level) return null;
+            return (
+              <span
+                className={`todo-item__carry-badge todo-item__carry-badge--${level}`}
+                title={`原定日期：${event.original_date}`}
+              >
+                距今 {daysBetween(todayStr, event.original_date)} 天
+              </span>
+            );
+          })()}
         </div>
         {event.note && <div className="todo-item__note">{event.note}</div>}
         {event.completed_at && (

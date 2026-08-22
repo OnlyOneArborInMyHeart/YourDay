@@ -446,7 +446,6 @@ function EventBlock({
         role="button"
         tabIndex={0}
         onClick={(ev) => {
-          // 拖动刚结束 → 浏览器会把 pointerup 派发为合成 click，必须忽略，否则会误打开详情
           if (wasDraggingRef.current) {
             ev.stopPropagation();
             return;
@@ -462,17 +461,22 @@ function EventBlock({
         }}
         onPointerDown={(ev) => startDrag(ev, 'move')}
       >
-        <div className="event-block__title">{event.title}</div>
-        <div className="event-block__time">
-          {startTimeStr} – {endTimeStr}
-          <span className="event-block__dur"> · {dur} 分钟</span>
+        {/* 中间：任务名（视觉主体） */}
+        <div className="event-block__title-wrap">
+          <div className="event-block__title">{event.title}</div>
         </div>
+
+        {/* 右侧：时间 */}
+        <div className="event-block__time-wrap">
+          <div className="event-block__time">{startTimeStr} – {endTimeStr}</div>
+          <div className="event-block__dur">{dur} 分钟</div>
+        </div>
+
         {event.completed_at && (
           <div className="event-block__completed" title={event.completed_at}>
             ✓ 完成于 {formatCompletedTime(event.completed_at)}
           </div>
         )}
-        {event.note && renderHeight > 70 && <div className="event-block__note">{event.note}</div>}
       </div>
 
       {burstKey > 0 && (

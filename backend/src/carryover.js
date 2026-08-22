@@ -32,7 +32,7 @@ export function carryOverUnfinishedUpToToday() {
         start_time = NULL,
         end_time = NULL,
         is_todo = 1,
-        original_date = COALESCE(original_date, date),
+        original_date = COALESCE(original_date, ?),
         updated_at = datetime('now','localtime')
     WHERE id = ?
   `);
@@ -53,7 +53,7 @@ export function carryOverUnfinishedUpToToday() {
       // 首次顺延时（original_date 为 NULL），把当时的 date 写入 original_date；
       // 后续顺延只推进 date，original_date 保持首次值。
       if (row.original_date == null) {
-        stmtUpdateFirstCarry.run(today, row.id);
+        stmtUpdateFirstCarry.run(today, row.date, row.id);
       } else {
         stmtUpdate.run(today, row.id);
       }

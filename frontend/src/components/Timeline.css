@@ -1,3 +1,6 @@
+/* Cormorant Garamond — 优雅斜体书法衬线体 */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap');
+
 .timeline {
   display: flex;
   background: var(--color-bg-elev);
@@ -146,8 +149,8 @@
 }
 .event-block.has-bg .event-block__title,
 .event-block.has-bg .event-block__time,
-.event-block.has-bg .event-block__note {
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7), 0 0 6px rgba(255, 255, 255, 0.5);
+.event-block.has-bg .event-block__dur {
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
 /* 上下沿拖动抓取区 */
@@ -228,11 +231,10 @@
 .event-block__main {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  justify-content: center; /* 文本上下居中 */
-  align-items: flex-start; /* 文字保持左对齐 */
-  gap: 4px;
-  padding: 8px 12px 8px 32px; /* 给左侧勾选按钮留位 */
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
   background: transparent;
   border: none;
   text-align: left;
@@ -242,49 +244,76 @@
   overflow: hidden;
   min-width: 0;
   touch-action: none;
-  /* 相对定位 + z-index 1：保证有背景图时文字能盖在背景之上 */
   position: relative;
   z-index: 1;
 }
 
+/* 三段共同：居中文字，无边框 */
+.event-block__title-wrap,
+.event-block__time-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  padding: 4px 8px;
+}
+
+.event-block__title-wrap {
+  flex: 1 1 auto;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.event-block__time-wrap {
+  flex: 0 0 30%;
+  background: rgba(255, 255, 255, 0.45);
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+/* 任务名 — 大字居中 */
 .event-block__title {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: 'Cormorant Garamond', 'Palatino Linotype', 'Book Antiqua', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  font-style: italic;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  align-self: stretch; /* 让 ellipsis 在 main 宽度内生效 */
-  text-align: left;
-}
-.event-block__time {
-  font-size: 11px;
-  opacity: 0.85;
-  font-variant-numeric: tabular-nums;
-  align-self: stretch;
-  text-align: left;
-}
-.event-block__dur {
-  opacity: 0.7;
-}
-.event-block__note {
-  font-size: 11px;
-  opacity: 0.8;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  align-self: stretch;
-  text-align: left;
-}
-.event-block__completed {
-  font-size: 10px;
-  font-weight: 500;
-  color: #15803d;
-  background: rgba(220, 252, 231, 0.85);
-  border-radius: 999px;
-  padding: 1px 8px;
-  align-self: flex-start;
+  text-align: center;
   letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: currentColor;
+  width: 100%;
+}
+
+/* 时间 — 与任务名等大斜体 */
+.event-block__time {
+  font-size: 18px;
+  font-weight: 700;
+  font-style: italic;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  text-align: left;
+  color: currentColor;
+}
+
+/* 时长 — 稍小字号靠右斜体 */
+.event-block__dur {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  text-align: right;
 }
 
 /* —— 优先级配色 —— */
@@ -346,7 +375,7 @@
 }
 .event-block.is-done .event-block__title,
 .event-block.is-done .event-block__time,
-.event-block.is-done .event-block__note {
+.event-block.is-done .event-block__dur {
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
   color: var(--color-text-soft);
