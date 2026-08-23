@@ -75,8 +75,8 @@ router.post('/signup', (req, res) => {
   const exist = db.prepare('SELECT id FROM users WHERE username = ?').get(uname);
   if (exist) return res.status(409).json({ error: '该用户名已被注册' });
 
-  const password_hash = bcrypt.hashSync(pwd, 10);
-  const security_answer_hash = bcrypt.hashSync(a.toLowerCase(), 10);
+  const password_hash = bcrypt.hashSync(pwd, 12);
+  const security_answer_hash = bcrypt.hashSync(a.toLowerCase(), 12);
   const info = db
     .prepare(
       `INSERT INTO users (username, password_hash, security_question, security_answer_hash)
@@ -180,7 +180,7 @@ router.post('/reset-password', (req, res) => {
   const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.uid);
   if (!exists) return res.status(404).json({ error: '账号不存在' });
 
-  const hash = bcrypt.hashSync(pwd, 10);
+  const hash = bcrypt.hashSync(pwd, 12);
   db.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now','localtime') WHERE id = ?`
   ).run(hash, payload.uid);
@@ -209,7 +209,7 @@ router.post('/change-password', verifyToken, (req, res) => {
   if (!bcrypt.compareSync(oldPwd, row.password_hash)) {
     return res.status(401).json({ error: '旧密码错误' });
   }
-  const hash = bcrypt.hashSync(newPwd, 10);
+  const hash = bcrypt.hashSync(newPwd, 12);
   db.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now','localtime') WHERE id = ?`
   ).run(hash, req.userId);
@@ -221,6 +221,165 @@ router.post('/change-password', verifyToken, (req, res) => {
  */
 router.get('/security-questions', (_req, res) => {
   res.json({ questions: SECURITY_QUESTIONS });
+});
+
+// ============================================================
+// 微信小程序登录（wxlogin）
+// ============================================================
+
+const WX_APPID = process.env.WX_APPID || '';
+const WX_SECRET = process.env.WX_SECRET || '';
+const CODE2SESSION_URL = 'https://api.weixin.qq.com/sns/jscode2session';
+
+// 内存级 code 防重放缓存（5 分钟内同 code 拒绝第二次）。
+// 小程序后端单实例够用；多实例请改为 Redis。
+const CODE_CACHE_TTL_MS = 5 * 60_000;
+const seenCodes = new Map(); // code -> expiresAt
+
+function markCodeSeen(code) {
+  seenCodes.set(code, Date.now() + CODE_CACHE_TTL_MS);
+  // 惰性清理
+  if (seenCodes.size > 1000) {
+    const now = Date.now();
+    for (const [k, v] of seenCodes) if (v < now) seenCodes.delete(k);
+  }
+}
+
+function isCodeSeen(code) {
+  const exp = seenCodes.get(code);
+  if (!exp) return false;
+  if (exp < Date.now()) {
+    seenCodes.delete(code);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 调用微信 code2Session，换 openid / session_key / unionid
+ */
+async function code2Session(code) {
+  if (!WX_APPID || !WX_SECRET) {
+    const err = new Error('服务端未配置 WX_APPID / WX_SECRET');
+    err.status = 503;
+    throw err;
+  }
+  const url =
+    `${CODE2SESSION_URL}?appid=${encodeURIComponent(WX_APPID)}` +
+    `&secret=${encodeURIComponent(WX_SECRET)}` +
+    `&js_code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`code2Session http ${r.status}`);
+  const j = await r.json();
+  if (j.errcode) {
+    const err = new Error(`code2Session errcode=${j.errcode} ${j.errmsg || ''}`);
+    err.status = 400;
+    throw err;
+  }
+  return j; // { openid, session_key, unionid? }
+}
+
+/**
+ * POST /api/auth/wxlogin
+ * body: { code, username?, password? }
+ *  - 仅传 code：openid 已绑定则直接签发 JWT；未绑定返回 404 + needBind=true
+ *  - 再传 username+password：把当前 openid 绑定到该账号（需校验密码），之后签发 JWT
+ */
+router.post('/wxlogin', async (req, res) => {
+  const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  if (!code) return res.status(400).json({ error: '缺少 code' });
+
+  // 防重放
+  if (isCodeSeen(code)) return res.status(400).json({ error: 'code 已使用，请重新获取' });
+  markCodeSeen(code);
+
+  let wx;
+  try {
+    wx = await code2Session(code);
+  } catch (e) {
+    req.log?.error({ err: e.message }, 'wx code2Session failed');
+    return res.status(e.status || 502).json({ error: '微信服务暂时不可用' });
+  }
+  const { openid, unionid } = wx;
+  if (!openid) return res.status(502).json({ error: '未获取到 openid' });
+
+  const existing = db
+    .prepare('SELECT id, username FROM users WHERE wx_openid = ?')
+    .get(openid);
+
+  if (existing) {
+    const user = { id: existing.id, username: existing.username };
+    return res.json({
+      bound: true,
+      user: { id: user.id, username: user.username },
+      token: signAuthToken(user),
+    });
+  }
+
+  // 未绑定：若同时给了 username + password，则校验并绑定
+  const uname = normalizeUsername(req.body?.username);
+  const pwd = typeof req.body?.password === 'string' ? req.body.password : '';
+  if (uname && pwd) {
+    const row = db
+      .prepare('SELECT id, username, password_hash FROM users WHERE username = ?')
+      .get(uname);
+    if (!row || !bcrypt.compareSync(pwd, row.password_hash)) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+    // 一个微信号只能绑定一个账号；当前账号已被其他 openid 绑定则拒绝覆盖。
+    const dup = db.prepare('SELECT wx_openid FROM users WHERE id = ?').get(row.id);
+    if (dup && dup.wx_openid && dup.wx_openid !== openid) {
+      return res.status(409).json({ error: '该账号已绑定其他微信' });
+    }
+    db.prepare(
+      `UPDATE users SET wx_openid = ?, wx_unionid = ?, wx_bound_at = datetime('now','localtime'),
+       updated_at = datetime('now','localtime') WHERE id = ?`
+    ).run(openid, unionid || null, row.id);
+    const user = { id: row.id, username: row.username };
+    return res.json({
+      bound: true,
+      user: { id: user.id, username: user.username },
+      token: signAuthToken(user),
+    });
+  }
+
+  return res.status(404).json({
+    needBind: true,
+    openid,
+    unionid: unionid || null,
+  });
+});
+
+/**
+ * POST /api/auth/wxbind  —— 已登录用户用 code 绑定当前 openid
+ *  - body: { code }
+ */
+router.post('/wxbind', verifyToken, async (req, res) => {
+  const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  if (!code) return res.status(400).json({ error: '缺少 code' });
+
+  if (isCodeSeen(code)) return res.status(400).json({ error: 'code 已使用，请重新获取' });
+  markCodeSeen(code);
+
+  let wx;
+  try {
+    wx = await code2Session(code);
+  } catch (e) {
+    return res.status(e.status || 502).json({ error: '微信服务暂时不可用' });
+  }
+  const { openid, unionid } = wx;
+  if (!openid) return res.status(502).json({ error: '未获取到 openid' });
+
+  // 检查 openid 是否已被别人占用
+  const conflict = db.prepare('SELECT id, username FROM users WHERE wx_openid = ? AND id != ?').get(openid, req.userId);
+  if (conflict) return res.status(409).json({ error: '该微信已绑定其他账号' });
+
+  db.prepare(
+    `UPDATE users SET wx_openid = ?, wx_unionid = ?, wx_bound_at = datetime('now','localtime'),
+     updated_at = datetime('now','localtime') WHERE id = ?`
+  ).run(openid, unionid || null, req.userId);
+
+  res.json({ ok: true });
 });
 
 export default router;

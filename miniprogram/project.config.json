@@ -1,0 +1,19 @@
+{
+  "miniprogramRoot": "dist/",
+  "projectname": "YourDay",
+  "description": "个人日程与日记记录",
+  "appid": "替换为你的微信小程序 AppID",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "babelSetting": { "ignore": [], "disablePlugins": [], "outputPath": "" }
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "condition": {},
+  "editorSetting": { "tabIndent": "insertSpaces", "tabSize": 2 }
+}

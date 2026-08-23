@@ -155,6 +155,13 @@ export function SignupPage() {
           </button>
           <p className="auth-form__hint">你的账号与数据完全独立，请妥善记住密码与安全答案。</p>
         </form>
+        <p className="auth-form__legal">
+          注册即代表你已阅读并同意
+          <Link to="/terms" className="auth-form__link">《用户服务协议》</Link>
+          与
+          <Link to="/privacy" className="auth-form__link">《隐私政策》</Link>
+          。
+        </p>
         <div className="auth-form__footer">
           已有账号？
           <Link to="/login" className="auth-form__link">直接登录</Link>

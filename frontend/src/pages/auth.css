@@ -105,6 +105,13 @@
   color: #6b7588;
 }
 
+.auth-form__legal {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #8a93a6;
+}
+
 .auth-form__link {
   color: #5a78ea;
   text-decoration: none;

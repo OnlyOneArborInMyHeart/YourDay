@@ -74,6 +74,11 @@ export function LoginPage() {
           <Link to="/signup" className="auth-form__link">立即注册</Link>
           <Link to="/forgot-password" className="auth-form__link">忘记密码？</Link>
         </div>
+        <p className="auth-form__legal">
+          <Link to="/terms" className="auth-form__link">用户服务协议</Link>
+          <span aria-hidden> · </span>
+          <Link to="/privacy" className="auth-form__link">隐私政策</Link>
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,20 @@
+{
+  "name": "yourday-miniprogram-preview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "浏览器版预览（无需 Taro / 微信开发者工具，纯静态）。用于快速看 UI。",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.10"
+  }
+}

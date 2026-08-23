@@ -1,0 +1,11 @@
+# logrotate 配置 —— 部署到 /etc/logrotate.d/yourday 后生效（默认每天跑一次）。
+/opt/yourday/backend/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    sharedscripts
+}

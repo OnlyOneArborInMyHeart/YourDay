@@ -284,11 +284,28 @@ db.exec(`
     password_hash TEXT NOT NULL,
     security_question TEXT NOT NULL DEFAULT '',
     security_answer_hash TEXT NOT NULL DEFAULT '',
+    wx_openid TEXT,
+    wx_unionid TEXT,
+    wx_bound_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 `);
+
+// 给已存在的库添加微信绑定字段（幂等迁移）。
+for (const col of ['wx_openid', 'wx_unionid', 'wx_bound_at']) {
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${col} ${col === 'wx_bound_at' ? 'TEXT' : 'TEXT'}`);
+  } catch {
+    /* 列已存在 */
+  }
+}
+try {
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_wx_openid ON users(wx_openid) WHERE wx_openid IS NOT NULL`);
+} catch {
+  /* ignore */
+}
 
 // 2. 给所有"业务数据表"加 user_id 列，并建索引。
 //    对老数据库：列不存在则添加；老数据 user_id 暂留 NULL，迁移完成后下面会回填为 root.id。
@@ -325,7 +342,7 @@ const bcrypt = bcryptNs.default || bcryptNs;
 const ROOT_USERNAME = 'root';
 let rootRow = db.prepare('SELECT id FROM users WHERE username = ?').get(ROOT_USERNAME);
 if (!rootRow) {
-  const hash = bcrypt.hashSync('123456', 10);
+  const hash = bcrypt.hashSync('123456', 12);
   const info = db
     .prepare(
       `INSERT INTO users (username, password_hash, security_question, security_answer_hash)

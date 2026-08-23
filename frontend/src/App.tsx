@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { LegalPage } from './pages/LegalPage';
+import './pages/LegalPage.css';
 import { DateHeader } from './components/DateHeader';
 import { EventCalendar } from './components/EventCalendar';
 import { EventList } from './components/EventList';
@@ -686,6 +688,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+      <Route path="/terms" element={<LegalPage kind="terms" />} />
       <Route
         path="/"
         element={

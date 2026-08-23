@@ -1,12 +1,28 @@
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yourday-dev-secret-change-me';
-const TOKEN_TTL = '7d';
-const RESET_TOKEN_TTL = '15m';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PROD = NODE_ENV === 'production';
 
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.warn('[auth] WARNING: JWT_SECRET 未设置，使用了默认值——生产环境务必设置。');
+const JWT_SECRET = process.env.JWT_SECRET
+  || (IS_PROD
+    ? (() => {
+        // 生产环境：拒绝用默认值
+        console.error('[auth] FATAL: 缺少 JWT_SECRET 环境变量，进程将退出');
+        process.exit(1);
+      })()
+    : 'yourday-dev-secret-change-me');
+
+if (IS_PROD && (!JWT_SECRET || JWT_SECRET.length < 32)) {
+  console.error('[auth] FATAL: JWT_SECRET 至少 32 位');
+  process.exit(1);
+}
+
+const TOKEN_TTL = process.env.TOKEN_TTL || '7d';
+const RESET_TOKEN_TTL = process.env.RESET_TOKEN_TTL || '15m';
+
+if (!IS_PROD && !process.env.JWT_SECRET) {
+  console.warn('[auth] WARN: 使用默认 JWT_SECRET（仅开发环境）');
 }
 
 /**

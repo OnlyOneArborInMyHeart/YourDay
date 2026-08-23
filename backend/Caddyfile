@@ -1,0 +1,65 @@
+# Caddyfile — B 档（国内个人备案档）反代配置
+# 用法：
+#   1. 把你备案的域名写进 YOUR_DOMAIN 与 API_DOMAIN
+#   2. 在反代机器上启动 caddy：caddy run --config /etc/caddy/Caddyfile --adapter native
+#   3. Caddy 会自动申请 Let's Encrypt 证书并续期
+#
+# 约定：
+#   - Web 前端静态产物在 /opt/yourday/frontend/dist（vite build 产物）
+#   - 后端 Node 进程监听 127.0.0.1:3001（PM2）
+#   - 上传目录在 /opt/yourday/backend/data/uploads
+
+YOUR_DOMAIN {
+    encode gzip zstd
+    root * /opt/yourday/frontend/dist
+    # SPA fallback：所有未命中文件的请求都返回 index.html
+    try_files {path} {path}/ /index.html
+    file_server
+
+    # 安全头（前端来自 vite，可只保留基本；helmet 已加在后端）
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # 移除 Server 标识
+        -Server
+    }
+
+    # 可选：访问日志打到 /var/log/caddy/yourday.access.log
+    log {
+        output file /var/log/caddy/yourday.access.log {
+            roll_size 100mb
+            roll_keep 14
+        }
+    }
+}
+
+API_DOMAIN {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:3001 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        # 大文件上传（mp3 等）给 60s
+        timeouts {
+            read 60s
+            write 60s
+            idle 30s
+        }
+    }
+
+    # 仅放行"已备案 Web 域名 + 小程序后端"
+    @forbid not origin https://YOUR_DOMAIN https://www.YOUR_DOMAIN
+    # 注意：微信小程序/原生 curl 不带 Origin，上面 @forbid 实际上等于关闭外网拒绝，
+    # 真实防滥用交给后端 helmet + rate-limit + JWT。
+    handle @forbid {
+        respond 403
+    }
+
+    log {
+        output file /var/log/caddy/yourday-api.access.log {
+            roll_size 100mb
+            roll_keep 14
+        }
+    }
+}
