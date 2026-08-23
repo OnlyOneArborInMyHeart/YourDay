@@ -66,6 +66,8 @@ export function HomeShell() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>({ kind: 'closed' });
   const [decomposerOpen, setDecomposerOpen] = useState(false);
+  /** 'time' = 默认时间型拆解；'quantity' = 默认数量型（无时间）拆解 */
+  const [decomposerMode, setDecomposerMode] = useState<'time' | 'quantity'>('time');
   // 日记弹窗：null=关闭；string=打开并预填该日期
   const [diaryModalDate, setDiaryModalDate] = useState<string | null>(null);
   // 批量导出弹窗
@@ -493,7 +495,14 @@ export function HomeShell() {
         date={date}
         onChange={setDate}
         onAdd={() => setModal({ kind: 'create' })}
-        onOpenDecomposer={() => setDecomposerOpen(true)}
+        onOpenDecomposer={() => {
+          setDecomposerMode('time');
+          setDecomposerOpen(true);
+        }}
+        onOpenQuantityDecomposer={() => {
+          setDecomposerMode('quantity');
+          setDecomposerOpen(true);
+        }}
         onOpenDiary={() => setDiaryModalDate(date)}
         theme={theme}
         onThemeChange={(targetDate, title) => setThemeForDate(targetDate, title)}
@@ -593,6 +602,7 @@ export function HomeShell() {
         open={decomposerOpen}
         onClose={() => setDecomposerOpen(false)}
         onCreated={handleDecomposerCreated}
+        defaultMode={decomposerMode}
       />
 
       <DiaryModal

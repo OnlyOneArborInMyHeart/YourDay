@@ -19,6 +19,8 @@ interface Props {
   onChange: (next: string) => void;
   onAdd: () => void;
   onOpenDecomposer: () => void;
+  /** 打开"按数量拆"模式（无时间任务） */
+  onOpenQuantityDecomposer?: () => void;
   onOpenDiary: () => void;
   theme: string;
   /** App 已实现乐观更新与回滚，DateHeader 只负责通知 */
@@ -43,6 +45,7 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePl
     onChange,
     onAdd,
     onOpenDecomposer,
+    onOpenQuantityDecomposer,
     onOpenDiary,
     theme,
     onThemeChange,
@@ -262,6 +265,15 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePl
         >
           ⚡ 拆解任务
         </button>
+        {onOpenQuantityDecomposer && (
+          <button
+            className="ghost-btn ghost-btn--decomposer"
+            onClick={onOpenQuantityDecomposer}
+            title="一句话描述无时间任务（如：读 50 页 书），按「前重后轻」拆成每天 To-do"
+          >
+            📚 数量拆解
+          </button>
+        )}
         <button className="primary-btn" onClick={onAdd}>
           + 新建事项
         </button>
