@@ -86,3 +86,41 @@
         max-height: 360px;
     }
 }
+
+/* 顶栏用户信息 + 退出登录按钮 */
+.app__user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--color-border, #e3e6ee);
+    font-size: 13px;
+    color: var(--color-text-soft, #4a5168);
+    margin-right: 8px;
+}
+
+.app__user-chip-name {
+    font-weight: 600;
+    color: var(--color-text, #1f2538);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app__user-chip-logout {
+    border: none;
+    background: transparent;
+    color: #b14141;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    transition: background 0.15s ease;
+}
+
+.app__user-chip-logout:hover {
+    background: rgba(177, 65, 65, 0.12);
+}

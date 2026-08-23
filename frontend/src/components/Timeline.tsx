@@ -37,10 +37,10 @@ interface LaidOutEvent {
 function layoutEvents(events: Event[]): LaidOutEvent[] {
   // 只收到非 isTodo 项，start_time/end_time 不为 null
   const sorted = [...events].sort((a, b) => {
-    const sa = a.start_time as string;
-    const sb = b.start_time as string;
-    const ea = a.end_time as string;
-    const eb = b.end_time as string;
+    const sa = a.start_time ?? '';
+    const sb = b.start_time ?? '';
+    const ea = a.end_time ?? '';
+    const eb = b.end_time ?? '';
     return sa === sb ? ea.localeCompare(eb) : sa.localeCompare(sb);
   });
 

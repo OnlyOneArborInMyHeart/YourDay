@@ -26,7 +26,7 @@ function localDateFromTs(ts) {
 }
 
 /**
- * 拉取指定日期"昨天之前已完成"的事项（todo / event），跳过已写入日志的。
+ * 拉取指定用户 + 指定日期"昨天之前已完成"的事项（todo / event），跳过已写入日志的。
  *
  * 返回 { todos: [...], events: [...] }，每条带 kind 方便写入时拼路径。
  *
@@ -36,35 +36,37 @@ function localDateFromTs(ts) {
  * 不限事件 is_todo：跨日顺延后 is_todo=1 的纯待办同理归入（它在用户感知中
  * 也是"需要做的一件事"）。
  */
-function loadItemsCompletedOn(targetDate) {
+function loadItemsCompletedOn(targetDate, userId) {
   const tsPrefix = `${targetDate}%`;
 
   const todos = db
     .prepare(
       `SELECT id, title, priority, completed_at FROM todos
-       WHERE done = 1
+       WHERE user_id = ?
+         AND done = 1
          AND parent_id IS NULL
          AND completed_at LIKE ?
          AND NOT EXISTS (
            SELECT 1 FROM diary_archive_log
-           WHERE diary_archive_log.date = ? AND kind = 'todo' AND item_id = todos.id
+           WHERE diary_archive_log.date = ? AND diary_archive_log.user_id = ? AND kind = 'todo' AND item_id = todos.id
          )
        ORDER BY completed_at ASC, id ASC`
     )
-    .all(tsPrefix, targetDate);
+    .all(userId, tsPrefix, targetDate, userId);
 
   const events = db
     .prepare(
       `SELECT id, title, priority, start_time, end_time, completed_at FROM events
-       WHERE done = 1
+       WHERE user_id = ?
+         AND done = 1
          AND completed_at LIKE ?
          AND NOT EXISTS (
            SELECT 1 FROM diary_archive_log
-           WHERE diary_archive_log.date = ? AND kind = 'event' AND item_id = events.id
+           WHERE diary_archive_log.date = ? AND diary_archive_log.user_id = ? AND kind = 'event' AND item_id = events.id
          )
        ORDER BY completed_at ASC, id ASC`
     )
-    .all(tsPrefix, targetDate);
+    .all(userId, tsPrefix, targetDate, userId);
 
   return { todos, events };
 }
@@ -121,11 +123,11 @@ function escapeRe(s) {
  * 若该日期 diary 不存在 → INSERT 新行（含新建块）。
  * 若 diary 存在但块不存在 → 末尾追加新块。
  */
-function appendArchiveToDiary(targetDate, lines) {
+function appendArchiveToDiary(targetDate, lines, userId) {
   if (lines.length === 0) return;
   const existing = db
-    .prepare('SELECT markdown_content FROM diary_entries WHERE date = ?')
-    .get(targetDate);
+    .prepare('SELECT markdown_content FROM diary_entries WHERE user_id = ? AND date = ?')
+    .get(userId, targetDate);
   const baseContent = existing?.markdown_content ?? '';
   const blockHeader = `## 完成的事项 (${targetDate})`;
 
@@ -179,12 +181,12 @@ function appendArchiveToDiary(targetDate, lines) {
   }
 
   db.prepare(
-    `INSERT INTO diary_entries (date, title, markdown_content, updated_at)
-     VALUES (?, '', ?, datetime('now','localtime'))
-     ON CONFLICT(date) DO UPDATE SET
+    `INSERT INTO diary_entries (user_id, date, title, markdown_content, updated_at)
+     VALUES (?, ?, '', ?, datetime('now','localtime'))
+     ON CONFLICT(user_id, date) DO UPDATE SET
        markdown_content = excluded.markdown_content,
        updated_at = datetime('now','localtime')`
-  ).run(targetDate, next);
+  ).run(userId, targetDate, next);
 }
 
 /**
@@ -198,10 +200,10 @@ function appendArchiveToDiary(targetDate, lines) {
  * 返回 { diaryDate, removed }：若实际有内容被删除则 removed=true；diaryDate = 该事项
  * 在 log 里登记的归档日（用于校验"该事项确实在那天被归档过"）。
  */
-function removeArchivedItemFromDiary(diaryDate, kind, itemId) {
+function removeArchivedItemFromDiary(diaryDate, kind, itemId, userId) {
   const existing = db
-    .prepare('SELECT markdown_content FROM diary_entries WHERE date = ?')
-    .get(diaryDate);
+    .prepare('SELECT markdown_content FROM diary_entries WHERE user_id = ? AND date = ?')
+    .get(userId, diaryDate);
   if (!existing) return { diaryDate, removed: false };
   const lines = existing.markdown_content.split(/\r?\n/);
   const target = `<!-- a:${kind},id=${itemId},`;
@@ -244,8 +246,8 @@ function removeArchivedItemFromDiary(diaryDate, kind, itemId) {
 
   db.prepare(
     `UPDATE diary_entries SET markdown_content = ?, updated_at = datetime('now','localtime')
-     WHERE date = ?`
-  ).run(next, diaryDate);
+     WHERE user_id = ? AND date = ?`
+  ).run(next, userId, diaryDate);
   return { diaryDate, removed: true };
 }
 
@@ -261,17 +263,17 @@ function removeArchivedItemFromDiary(diaryDate, kind, itemId) {
 export function unarchiveSingleTodo(todoId) {
   const logs = db
     .prepare(
-      `SELECT date FROM diary_archive_log WHERE kind = 'todo' AND item_id = ? ORDER BY date`
+      `SELECT date, user_id FROM diary_archive_log WHERE kind = 'todo' AND item_id = ? ORDER BY date`
     )
     .all(todoId);
   if (logs.length === 0) return { affectedDates: [], removedLines: 0 };
   const affected = [];
   let removedLines = 0;
   const tx = db.transaction(() => {
-    for (const { date } of logs) {
-      const r = removeArchivedItemFromDiary(date, 'todo', todoId);
+    for (const log of logs) {
+      const r = removeArchivedItemFromDiary(log.date, 'todo', todoId, log.user_id);
       if (r.removed) {
-        affected.push(date);
+        affected.push(log.date);
         removedLines++;
       }
     }
@@ -292,17 +294,17 @@ export function unarchiveSingleTodo(todoId) {
 export function unarchiveSingleEvent(eventId) {
   const logs = db
     .prepare(
-      `SELECT date FROM diary_archive_log WHERE kind = 'event' AND item_id = ? ORDER BY date`
+      `SELECT date, user_id FROM diary_archive_log WHERE kind = 'event' AND item_id = ? ORDER BY date`
     )
     .all(eventId);
   if (logs.length === 0) return { affectedDates: [], removedLines: 0 };
   const affected = [];
   let removedLines = 0;
   const tx = db.transaction(() => {
-    for (const { date } of logs) {
-      const r = removeArchivedItemFromDiary(date, 'event', eventId);
+    for (const log of logs) {
+      const r = removeArchivedItemFromDiary(log.date, 'event', eventId, log.user_id);
       if (r.removed) {
-        affected.push(date);
+        affected.push(log.date);
         removedLines++;
       }
     }
@@ -320,25 +322,25 @@ export function unarchiveSingleEvent(eventId) {
 /**
  * 把归档过的 (targetDate, kind, item_id) 写入日志，事务里和 markdown 更新同步。
  */
-function markArchived(targetDate, kind, items) {
+function markArchived(targetDate, kind, items, userId) {
   if (items.length === 0) return;
   const insertLog = db.prepare(
-    `INSERT OR IGNORE INTO diary_archive_log (date, kind, item_id) VALUES (?, ?, ?)`
+    `INSERT OR IGNORE INTO diary_archive_log (date, user_id, kind, item_id) VALUES (?, ?, ?, ?)`
   );
   const tx = db.transaction((rows) => {
-    for (const r of rows) insertLog.run(targetDate, kind, r.id);
+    for (const r of rows) insertLog.run(targetDate, userId, kind, r.id);
   });
   tx(items);
 }
 
 /**
  * 把"目标日"完成的事项归档到当天的日记末尾。
- * targetDate 默认 = 昨天（相对 todayLocal）。可手工指定以补跑历史。
+ * targetDate 默认 = 昨天（相对 todayLocal）。
  *
  * 返回 { archivedTodos, archivedEvents, diaryDate }。
  */
-export function archiveCompletedToDay(targetDate) {
-  const { todos, events } = loadItemsCompletedOn(targetDate);
+export function archiveCompletedToDay(targetDate, userId) {
+  const { todos, events } = loadItemsCompletedOn(targetDate, userId);
 
   const lines = [];
   // 顺序：event 在前（通常更具"今日节奏"），todo 在后
@@ -346,16 +348,16 @@ export function archiveCompletedToDay(targetDate) {
   for (const t of todos) lines.push(...renderTodoLine(t).split('\n'));
 
   const tx = db.transaction(() => {
-    appendArchiveToDiary(targetDate, lines);
+    appendArchiveToDiary(targetDate, lines, userId);
     // 即便 lines 为空也得走完事务，但日志只写真有内容的
-    if (events.length > 0) markArchived(targetDate, 'event', events);
-    if (todos.length > 0) markArchived(targetDate, 'todo', todos);
+    if (events.length > 0) markArchived(targetDate, 'event', events, userId);
+    if (todos.length > 0) markArchived(targetDate, 'todo', todos, userId);
   });
   tx();
 
   if (lines.length > 0) {
     console.log(
-      `[diary-archive] 已将 ${lines.length} 条已完成事项归档到 ${targetDate} 的日记末尾`
+      `[diary-archive] 已将 ${lines.length} 条已完成事项归档到 ${targetDate} 的日记末尾 (uid=${userId})`
     );
   }
   return { archivedTodos: todos.length, archivedEvents: events.length, diaryDate: targetDate };
@@ -373,7 +375,7 @@ export function archiveCompletedToDay(targetDate) {
 export function archiveSingleTodoNow(todoId) {
   const row = db
     .prepare(
-      `SELECT id, title, priority, completed_at FROM todos
+      `SELECT id, title, priority, completed_at, user_id FROM todos
        WHERE id = ? AND done = 1 AND parent_id IS NULL`
     )
     .get(todoId);
@@ -382,15 +384,15 @@ export function archiveSingleTodoNow(todoId) {
   if (!day) return { archived: false, reason: 'no_completed_at' };
   const already = db
     .prepare(
-      `SELECT 1 FROM diary_archive_log WHERE date = ? AND kind = 'todo' AND item_id = ?`
+      `SELECT 1 FROM diary_archive_log WHERE date = ? AND user_id = ? AND kind = 'todo' AND item_id = ?`
     )
-    .get(day, todoId);
+    .get(day, row.user_id, todoId);
   if (already) return { archived: false, reason: 'already_archived', diaryDate: day };
 
   const lines = renderTodoLine(row).split('\n');
   const tx = db.transaction(() => {
-    appendArchiveToDiary(day, lines);
-    markArchived(day, 'todo', [row]);
+    appendArchiveToDiary(day, lines, row.user_id);
+    markArchived(day, 'todo', [row], row.user_id);
   });
   tx();
   console.log(`[diary-archive] 完成动作触发归档：todo#${todoId} → ${day}`);
@@ -403,7 +405,7 @@ export function archiveSingleTodoNow(todoId) {
 export function archiveSingleEventNow(eventId) {
   const row = db
     .prepare(
-      `SELECT id, title, priority, start_time, end_time, completed_at FROM events
+      `SELECT id, title, priority, start_time, end_time, completed_at, user_id FROM events
        WHERE id = ? AND done = 1`
     )
     .get(eventId);
@@ -412,15 +414,15 @@ export function archiveSingleEventNow(eventId) {
   if (!day) return { archived: false, reason: 'no_completed_at' };
   const already = db
     .prepare(
-      `SELECT 1 FROM diary_archive_log WHERE date = ? AND kind = 'event' AND item_id = ?`
+      `SELECT 1 FROM diary_archive_log WHERE date = ? AND user_id = ? AND kind = 'event' AND item_id = ?`
     )
-    .get(day, eventId);
+    .get(day, row.user_id, eventId);
   if (already) return { archived: false, reason: 'already_archived', diaryDate: day };
 
   const lines = renderEventLine(row).split('\n');
   const tx = db.transaction(() => {
-    appendArchiveToDiary(day, lines);
-    markArchived(day, 'event', [row]);
+    appendArchiveToDiary(day, lines, row.user_id);
+    markArchived(day, 'event', [row], row.user_id);
   });
   tx();
   console.log(`[diary-archive] 完成动作触发归档：event#${eventId} → ${day}`);
@@ -429,6 +431,7 @@ export function archiveSingleEventNow(eventId) {
 
 /**
  * 主入口：每天第一次被调用时执行一次——把"昨天"归档。
+ * 多用户：每个用户都跑一遍。
  */
 export function archiveCompletedToYesterdayIfNewDay() {
   const today = todayLocal();
@@ -436,9 +439,15 @@ export function archiveCompletedToYesterdayIfNewDay() {
     return { archivedTodos: 0, archivedEvents: 0, diaryDate: addDays(today, -1), skipped: true };
   }
   const yesterday = addDays(today, -1);
-  const res = archiveCompletedToDay(yesterday);
+  const users = db.prepare(`SELECT id FROM users`).all();
+  let total = { archivedTodos: 0, archivedEvents: 0 };
+  for (const u of users) {
+    const res = archiveCompletedToDay(yesterday, u.id);
+    total.archivedTodos += res.archivedTodos;
+    total.archivedEvents += res.archivedEvents;
+  }
   lastArchiveTickDate = today;
-  return res;
+  return { ...total, diaryDate: yesterday };
 }
 
 /**
@@ -447,11 +456,18 @@ export function archiveCompletedToYesterdayIfNewDay() {
 export function runArchiveNow(reason = 'startup') {
   const today = todayLocal();
   const yesterday = addDays(today, -1);
-  const res = archiveCompletedToDay(yesterday);
-  if (res.archivedTodos > 0 || res.archivedEvents > 0) {
-    console.log(`[diary-archive] (${reason}) 归档昨日已完成 ${res.archivedTodos + res.archivedEvents} 条`);
+  const users = db.prepare(`SELECT id FROM users`).all();
+  let totalTodos = 0;
+  let totalEvents = 0;
+  for (const u of users) {
+    const res = archiveCompletedToDay(yesterday, u.id);
+    totalTodos += res.archivedTodos;
+    totalEvents += res.archivedEvents;
   }
-  return res;
+  if (totalTodos > 0 || totalEvents > 0) {
+    console.log(`[diary-archive] (${reason}) 归档昨日已完成 ${totalTodos + totalEvents} 条 (across ${users.length} users)`);
+  }
+  return { archivedTodos: totalTodos, archivedEvents: totalEvents };
 }
 
 export { loadItemsCompletedOn, renderTodoLine, renderEventLine };

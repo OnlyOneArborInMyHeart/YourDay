@@ -8,7 +8,7 @@ import { runArchiveNow as runArchiveNowFn } from './diaryArchive.js';
 export { todayLocal, addDays };
 
 /**
- * 找出所有 date < today 且 done = 0 的事件，把它们一路顺延到 today。
+ * 把当前用户 date < today 且 done = 0 的事件一路顺延到 today。
  *
  * 顺延规则：
  * - 把 date 推进一天
@@ -18,13 +18,13 @@ export { todayLocal, addDays };
  *
  * 一次循环处理：如果一台机器连续多天没启动，顺延函数会一次性把过期 N 天的任务推到 today。
  */
-export function carryOverUnfinishedUpToToday() {
+export function carryOverUnfinishedUpToTodayForUser(userId) {
   const today = todayLocal();
 
   const stmtFind = db.prepare(`
     SELECT id, date, original_date
     FROM events
-    WHERE done = 0 AND date < ?
+    WHERE user_id = ? AND done = 0 AND date < ?
   `);
   const stmtUpdateFirstCarry = db.prepare(`
     UPDATE events
@@ -34,7 +34,7 @@ export function carryOverUnfinishedUpToToday() {
         is_todo = 1,
         original_date = COALESCE(original_date, ?),
         updated_at = datetime('now','localtime')
-    WHERE id = ?
+    WHERE id = ? AND user_id = ?
   `);
   const stmtUpdate = db.prepare(`
     UPDATE events
@@ -43,19 +43,19 @@ export function carryOverUnfinishedUpToToday() {
         end_time = NULL,
         is_todo = 1,
         updated_at = datetime('now','localtime')
-    WHERE id = ?
+    WHERE id = ? AND user_id = ?
   `);
 
   const tx = db.transaction(() => {
-    const rows = stmtFind.all(today);
+    const rows = stmtFind.all(userId, today);
     let moved = 0;
     for (const row of rows) {
       // 首次顺延时（original_date 为 NULL），把当时的 date 写入 original_date；
       // 后续顺延只推进 date，original_date 保持首次值。
       if (row.original_date == null) {
-        stmtUpdateFirstCarry.run(today, row.date, row.id);
+        stmtUpdateFirstCarry.run(today, row.date, row.id, userId);
       } else {
-        stmtUpdate.run(today, row.id);
+        stmtUpdate.run(today, row.id, userId);
       }
       moved++;
     }
@@ -64,9 +64,22 @@ export function carryOverUnfinishedUpToToday() {
 
   const moved = tx();
   if (moved > 0) {
-    console.log(`[carryover] 跨日顺延 ${moved} 条未完成任务 → ${today}`);
+    console.log(`[carryover] 跨日顺延 ${moved} 条未完成任务 → ${today}（uid=${userId}）`);
   }
   return moved;
+}
+
+/**
+ * 全用户跑一遍跨日顺延；启动/定时任务统一入口。
+ */
+export function carryOverUnfinishedUpToToday() {
+  const today = todayLocal();
+  const users = db.prepare('SELECT id FROM users').all();
+  let total = 0;
+  for (const u of users) {
+    total += carryOverUnfinishedUpToTodayForUser(u.id);
+  }
+  return total;
 }
 
 /**

@@ -11,6 +11,8 @@ import uploadsRouter from './routes/uploads.js';
 import eventBackgroundsRouter from './routes/eventBackgrounds.js';
 import todoAttachmentsRouter from './routes/todoAttachments.js';
 import musicRouter from './routes/music.js';
+import authRouter from './routes/auth.js';
+import { verifyToken } from './middleware/auth.js';
 import { startCarryOverScheduler, runCarryOverNow } from './carryover.js';
 import { runArchiveNow, archiveCompletedToYesterdayIfNewDay } from './diaryArchive.js';
 
@@ -24,10 +26,15 @@ app.use(cors());
 app.use(express.json({ limit: '256kb' }));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'YourDay API' }));
-app.use('/api/events', eventsRouter);
-app.use('/api/themes', dayThemesRouter);
-app.use('/api/todos', todosRouter);
-app.use('/api/diaries', diariesRouter);
+
+// 认证路由（公开）
+app.use('/api/auth', authRouter);
+
+// 所有业务路由需要先用 verifyToken 校验 JWT；后续路由内可使用 req.userId
+app.use('/api/events', verifyToken, eventsRouter);
+app.use('/api/themes', verifyToken, dayThemesRouter);
+app.use('/api/todos', verifyToken, todosRouter);
+app.use('/api/diaries', verifyToken, diariesRouter);
 
 // 静态托管上传的文件（GET 优先匹配，POST/DELETE 继续走路由）
 const uploadsDir = path.resolve(__dirname, '..', 'data', 'uploads');
@@ -39,15 +46,18 @@ app.use(
     fallthrough: true,
   })
 );
-app.use('/api/uploads', uploadsRouter);
+app.use('/api/uploads', verifyToken, uploadsRouter);
+// 事件背景图（GET 文件走静态；其它走路由）
 app.use(
   '/api/event-backgrounds',
   express.static(uploadsDir, {
     maxAge: '7d',
     fallthrough: true,
+    index: false,
+    redirect: false,
   })
 );
-app.use('/api/event-backgrounds', eventBackgroundsRouter);
+app.use('/api/event-backgrounds', verifyToken, eventBackgroundsRouter);
 
 // todo 备注内嵌图片：上传 → data/uploads/，通过 /api/todo-attachments/:filename 暴露。
 // 静态托管放前面，使 GET 直接命中文件；router 仍处理 POST/GET 列表/DELETE。
@@ -60,7 +70,7 @@ app.use(
     redirect: false,
   })
 );
-app.use('/api/todo-attachments', todoAttachmentsRouter);
+app.use('/api/todo-attachments', verifyToken, todoAttachmentsRouter);
 
 // 音乐库：上传音频文件存到 data/uploads/，通过 /api/music/:filename 暴露给前端。
 // 封面图：存到 data/uploads/covers/，通过 /api/music/covers/:filename 暴露。
@@ -84,7 +94,7 @@ app.use(
     redirect: false,
   })
 );
-app.use('/api/music', musicRouter);
+app.use('/api/music', verifyToken, musicRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

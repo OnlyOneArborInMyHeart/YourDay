@@ -199,11 +199,11 @@ function rowToTrack(row) {
 const TRACK_COLS =
   'id, title, filename, mime, size, original_name, cover_filename, lyrics, created_at';
 
-/** 列出所有音乐 */
-router.get('/', (_req, res) => {
+/** 列出当前用户全部音乐 */
+router.get('/', (req, res) => {
   const rows = db
-    .prepare(`SELECT ${TRACK_COLS} FROM music_tracks ORDER BY created_at DESC, id DESC`)
-    .all();
+    .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE user_id = ? ORDER BY created_at DESC, id DESC`)
+    .all(req.userId);
   res.json(rows.map(rowToTrack));
 });
 
@@ -222,20 +222,21 @@ router.post('/', (req, res) => {
 
     const info = db
       .prepare(
-        `INSERT INTO music_tracks (filename, mime, size, title, original_name)
-         VALUES (?, ?, ?, ?, ?)`
+        `INSERT INTO music_tracks (filename, mime, size, title, original_name, user_id)
+         VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(
         req.file.filename,
         req.file.mimetype,
         req.file.size,
         title.slice(0, 80),
-        decodedName
+        decodedName,
+        req.userId
       );
 
     const row = db
-      .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ?`)
-      .get(info.lastInsertRowid);
+      .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ? AND user_id = ?`)
+      .get(info.lastInsertRowid, req.userId);
 
     res.status(201).json(rowToTrack(row));
   });
@@ -251,13 +252,13 @@ router.patch('/:id', (req, res) => {
   if (!title) return res.status(400).json({ error: 'title 不能为空' });
 
   const result = db
-    .prepare('UPDATE music_tracks SET title = ? WHERE id = ?')
-    .run(title, id);
+    .prepare('UPDATE music_tracks SET title = ? WHERE id = ? AND user_id = ?')
+    .run(title, id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: '曲目不存在' });
 
   const row = db
-    .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ?`)
-    .get(id);
+    .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ? AND user_id = ?`)
+    .get(id, req.userId);
   res.json(rowToTrack(row));
 });
 
@@ -277,8 +278,8 @@ router.post('/:id/cover', (req, res) => {
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
 
     const row = db
-      .prepare('SELECT cover_filename FROM music_tracks WHERE id = ?')
-      .get(id);
+      .prepare('SELECT cover_filename FROM music_tracks WHERE id = ? AND user_id = ?')
+      .get(id, req.userId);
     if (!row) {
       safeUnlink(req.file.path);
       return res.status(404).json({ error: '曲目不存在' });
@@ -316,14 +317,15 @@ router.post('/:id/cover', (req, res) => {
     if (row.cover_filename) {
       safeUnlink(path.join(coversDir, row.cover_filename));
     }
-    db.prepare('UPDATE music_tracks SET cover_filename = ? WHERE id = ?').run(
+    db.prepare('UPDATE music_tracks SET cover_filename = ? WHERE id = ? AND user_id = ?').run(
       finalFilename,
-      id
+      id,
+      req.userId
     );
 
     const updated = db
-      .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ?`)
-      .get(id);
+      .prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ? AND user_id = ?`)
+      .get(id, req.userId);
     res.json(rowToTrack(updated));
   });
 });
@@ -335,12 +337,12 @@ router.delete('/:id/cover', (req, res) => {
     return res.status(400).json({ error: 'id 不合法' });
   }
   const row = db
-    .prepare('SELECT cover_filename FROM music_tracks WHERE id = ?')
-    .get(id);
+    .prepare('SELECT cover_filename FROM music_tracks WHERE id = ? AND user_id = ?')
+    .get(id, req.userId);
   if (!row) return res.status(204).end();
   if (row.cover_filename) {
     safeUnlink(path.join(coversDir, row.cover_filename));
-    db.prepare('UPDATE music_tracks SET cover_filename = NULL WHERE id = ?').run(id);
+    db.prepare('UPDATE music_tracks SET cover_filename = NULL WHERE id = ? AND user_id = ?').run(id, req.userId);
   }
   res.status(204).end();
 });
@@ -363,10 +365,10 @@ router.post('/:id/lyrics', (req, res) => {
   }
 
   const result = db
-    .prepare('UPDATE music_tracks SET lyrics = ? WHERE id = ?')
-    .run(text.slice(0, 256 * 1024), id);
+    .prepare('UPDATE music_tracks SET lyrics = ? WHERE id = ? AND user_id = ?')
+    .run(text.slice(0, 256 * 1024), id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: '曲目不存在' });
-  const row = db.prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ?`).get(id);
+  const row = db.prepare(`SELECT ${TRACK_COLS} FROM music_tracks WHERE id = ? AND user_id = ?`).get(id, req.userId);
   res.json(rowToTrack(row));
 });
 
@@ -377,8 +379,8 @@ router.delete('/:id/lyrics', (req, res) => {
     return res.status(400).json({ error: 'id 不合法' });
   }
   const result = db
-    .prepare('UPDATE music_tracks SET lyrics = NULL WHERE id = ?')
-    .run(id);
+    .prepare('UPDATE music_tracks SET lyrics = NULL WHERE id = ? AND user_id = ?')
+    .run(id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: '曲目不存在' });
   res.status(204).end();
 });
@@ -390,11 +392,11 @@ router.delete('/:id', (req, res) => {
     return res.status(400).json({ error: 'id 不合法' });
   }
   const row = db
-    .prepare('SELECT filename, cover_filename FROM music_tracks WHERE id = ?')
-    .get(id);
+    .prepare('SELECT filename, cover_filename FROM music_tracks WHERE id = ? AND user_id = ?')
+    .get(id, req.userId);
   if (!row) return res.status(204).end();
 
-  db.prepare('DELETE FROM music_tracks WHERE id = ?').run(id);
+  db.prepare('DELETE FROM music_tracks WHERE id = ? AND user_id = ?').run(id, req.userId);
   safeUnlink(path.join(uploadsDir, row.filename));
   if (row.cover_filename) safeUnlink(path.join(coversDir, row.cover_filename));
   res.status(204).end();

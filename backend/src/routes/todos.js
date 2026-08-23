@@ -39,15 +39,15 @@ function extractTodoImgIds(note) {
  * 给定一组 ID，返回这些图片的元数据。
  * 没命中（已被删除）的 ID 会被忽略，前端在渲染时会显示为失效 token。
  */
-function fetchNoteImages(ids) {
+function fetchNoteImages(ids, userId) {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => '?').join(',');
   const rows = db
     .prepare(
       `SELECT id, filename, mime, size, original_name, created_at
-       FROM todo_attachments WHERE id IN (${placeholders})`
+       FROM todo_attachments WHERE user_id = ? AND id IN (${placeholders})`
     )
-    .all(...ids);
+    .all(userId, ...ids);
   return rows
     .map((r) => ({ ...r, url: `/api/todo-attachments/${r.filename}` }))
     .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
@@ -79,11 +79,11 @@ function rowToTodo(row) {
 /**
  * 给定 rowToTodo 输出的对象，附上 note_images（前端渲染用）。
  */
-function withNoteImages(todo) {
+function withNoteImages(todo, userId) {
   if (!todo) return todo;
   const ids = todo._noteImgIds || [];
   const { _noteImgIds, ...rest } = todo;
-  return { ...rest, note_images: fetchNoteImages(ids) };
+  return { ...rest, note_images: fetchNoteImages(ids, userId) };
 }
 
 /**
@@ -149,8 +149,8 @@ function validateTodoBody(body, partial = false) {
       // - 防止指向自己
       // - 已完成的父 todo 不允许再添加/迁移子项（业务规则：父项完成后冻结子项）
       const parent = db
-        .prepare('SELECT id, parent_id, done FROM todos WHERE id = ?')
-        .get(pid);
+        .prepare('SELECT id, parent_id, done FROM todos WHERE id = ? AND user_id = ?')
+        .get(pid, req.userId);
       if (!parent) {
         errors.push('parent_id 引用的父 todo 不存在');
       } else if (parent.parent_id != null) {
@@ -197,16 +197,18 @@ router.get('/', (req, res) => {
     params.push(like, like);
   }
 
-  const sql = `SELECT * FROM todos ${
-    where.length ? 'WHERE ' + where.join(' AND ') : ''
+  const sql = `SELECT * FROM todos WHERE user_id = ? ${
+    where.length ? 'AND ' + where.join(' AND ') : ''
   } ORDER BY done ASC, priority ASC, COALESCE(due_date, '9999-99-99') ASC, created_at DESC`;
-  const rows = db.prepare(sql).all(...params);
-  res.json(rows.map(rowToTodo).map(withNoteImages));
+  const rows = db.prepare(sql).all(req.userId, ...params);
+  res.json(rows.map(rowToTodo).map((t) => withNoteImages(t, req.userId)));
 });
 
 router.get('/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
-  const todo = withNoteImages(rowToTodo(row));
+  const row = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
+  const todo = withNoteImages(rowToTodo(row), req.userId);
   if (!todo) return res.status(404).json({ error: 'todo 不存在' });
   res.json(todo);
 });
@@ -216,16 +218,20 @@ router.post('/', (req, res) => {
   if (errors.length) return res.status(400).json({ error: errors.join('；') });
 
   const stmt = db.prepare(`
-    INSERT INTO todos (title, priority, note, done, due_date, parent_id)
-    VALUES (@title, @priority, @note, @done, @due_date, @parent_id)
+    INSERT INTO todos (title, priority, note, done, due_date, parent_id, user_id)
+    VALUES (@title, @priority, @note, @done, @due_date, @parent_id, @user_id)
   `);
-  const result = stmt.run(value);
-  const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(withNoteImages(rowToTodo(row)));
+  const result = stmt.run({ ...value, user_id: req.userId });
+  const row = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(result.lastInsertRowid, req.userId);
+  res.status(201).json(withNoteImages(rowToTodo(row), req.userId));
 });
 
 router.put('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+  const existing = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: 'todo 不存在' });
 
   const { errors, value } = validateTodoBody(req.body, true);
@@ -260,8 +266,8 @@ router.put('/:id', (req, res) => {
         done=@done, due_date=@due_date, parent_id=@parent_id,
         completed_at=${completedAtExpr},
         updated_at=datetime('now','localtime')
-    WHERE id=@id
-  `).run({ id: req.params.id, ...merged });
+    WHERE id=@id AND user_id=@user_id
+  `).run({ id: req.params.id, user_id: req.userId, ...merged });
 
   // done 0→1 那一刻立刻把这一项归档到"完成日"对应日记末尾（顶级）
   // 顶级判定由 archiveSingleTodoNow 内部 WHERE parent_id IS NULL 处理
@@ -289,21 +295,21 @@ router.put('/:id', (req, res) => {
     if (orphans.length > 0) {
       const stmtCountRefs = db.prepare(
         `SELECT COUNT(*) AS n FROM todos
-         WHERE id != ? AND note LIKE ?`
+         WHERE user_id = ? AND id != ? AND note LIKE ?`
       );
-      const stmtDel = db.prepare('DELETE FROM todo_attachments WHERE id = ?');
-      const stmtGetFilename = db.prepare('SELECT filename FROM todo_attachments WHERE id = ?');
+      const stmtDel = db.prepare('DELETE FROM todo_attachments WHERE id = ? AND user_id = ?');
+      const stmtGetFilename = db.prepare('SELECT filename FROM todo_attachments WHERE id = ? AND user_id = ?');
       const stmtGetAllRefs = db.prepare(
-        `SELECT id FROM todos WHERE note LIKE ?`
+        `SELECT id FROM todos WHERE user_id = ? AND note LIKE ?`
       );
       for (const id of orphans) {
         const like = `%todo-img:${id}%`;
         // 还要排除自己刚被改的 merged.note（即当前 row）—— 但 merged.note 已经被写回 DB，
         // 所以 COUNT(*) 应该是"其他 todo 是否还在引用"。
-        const refs = stmtGetAllRefs.all(like).filter((r) => r.id !== Number(req.params.id));
+        const refs = stmtGetAllRefs.all(req.userId, like).filter((r) => r.id !== Number(req.params.id));
         if (refs.length === 0) {
-          const row = stmtGetFilename.get(id);
-          stmtDel.run(id);
+          const row = stmtGetFilename.get(id, req.userId);
+          stmtDel.run(id, req.userId);
           if (row?.filename) {
             // 删除文件（异步、忽略错误）
             const fp = path.join(uploadsDir, row.filename);
@@ -316,12 +322,16 @@ router.put('/:id', (req, res) => {
     /* 清理失败不影响主流程 */
   }
 
-  const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
-  res.json(withNoteImages(rowToTodo(row)));
+  const row = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
+  res.json(withNoteImages(rowToTodo(row), req.userId));
 });
 
 router.delete('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+  const existing = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: 'todo 不存在' });
 
   // 无论 done 状态，删除前先把日记里的归档行清掉
@@ -334,14 +344,18 @@ router.delete('/:id', (req, res) => {
     console.warn('[diary-archive] 删除 todo 前清理归档失败（不影响主流程）', err);
   }
 
-  const result = db.prepare('DELETE FROM todos WHERE id = ?').run(req.params.id);
+  const result = db
+    .prepare('DELETE FROM todos WHERE id = ? AND user_id = ?')
+    .run(req.params.id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: 'todo 不存在' });
   res.status(204).end();
 });
 
 // 便捷 toggle
 router.patch('/:id/toggle', (req, res) => {
-  const existing = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+  const existing = db
+    .prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: 'todo 不存在' });
 
   const next = existing.done ? 0 : 1;
@@ -350,8 +364,8 @@ router.patch('/:id/toggle', (req, res) => {
     ? "datetime('now','localtime')"
     : 'NULL';
   db.prepare(
-    `UPDATE todos SET done=?, completed_at=${completedAtExpr}, updated_at=datetime('now','localtime') WHERE id=?`
-  ).run(next, req.params.id);
+    `UPDATE todos SET done=?, completed_at=${completedAtExpr}, updated_at=datetime('now','localtime') WHERE id=? AND user_id=?`
+  ).run(next, req.params.id, req.userId);
 
   // 父项联动（仅当被切换的是子项时检查）：
   // - 子项切到 done 后，若所有兄弟都 done → 把父项标 done
@@ -364,9 +378,9 @@ router.patch('/:id/toggle', (req, res) => {
         `SELECT
             SUM(CASE WHEN done=1 THEN 1 ELSE 0 END) AS doneCount,
             COUNT(*) AS total
-         FROM todos WHERE parent_id = ?`
+         FROM todos WHERE user_id = ? AND parent_id = ?`
       )
-      .get(parentId);
+      .get(req.userId, parentId);
     const total = sibStats?.total ?? 0;
     const doneCount = sibStats?.doneCount ?? 0;
 
@@ -374,18 +388,18 @@ router.patch('/:id/toggle', (req, res) => {
     if (total > 0 && doneCount === total) parentShouldDone = true;
     else if (next === 0) parentShouldDone = false;
 
-const parentNow = db.prepare('SELECT done, completed_at FROM todos WHERE id=?').get(parentId);
+const parentNow = db.prepare('SELECT done, completed_at FROM todos WHERE id=? AND user_id=?').get(parentId, req.userId);
   if (parentNow && parentShouldDone !== null && !!parentNow.done !== parentShouldDone) {
     const parentExpr = parentShouldDone
       ? "datetime('now','localtime')"
       : 'NULL';
     db.prepare(
-      `UPDATE todos SET done=?, completed_at=${parentExpr}, updated_at=datetime('now','localtime') WHERE id=?`
-    ).run(parentShouldDone ? 1 : 0, parentId);
+      `UPDATE todos SET done=?, completed_at=${parentExpr}, updated_at=datetime('now','localtime') WHERE id=? AND user_id=?`
+    ).run(parentShouldDone ? 1 : 0, parentId, req.userId);
   }
 }
 
-const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
+const row = db.prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
   // 即时归档：完成动作发生瞬间把这一项 / 联动的父项追加到日记末尾
   // - 子项切到 done：归档子项本身（archiveSingleTodoNow 内 parent_id IS NULL 会跳过子项，符合预期）
   // - 父项被联动标 done：归档父项
@@ -399,7 +413,9 @@ const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
     }
     if (existing.parent_id != null) {
       const parentId = existing.parent_id;
-      const parentNow = db.prepare('SELECT done FROM todos WHERE id=?').get(parentId);
+      const parentNow = db
+        .prepare('SELECT done FROM todos WHERE id=? AND user_id=?')
+        .get(parentId, req.userId);
       if (parentNow && parentNow.done === 1) {
         archiveSingleTodoNow(parentId);
       }
@@ -407,7 +423,7 @@ const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
   } catch (err) {
     console.warn('[diary-archive] 即时归档 todo（toggle）失败（不影响主流程）', err);
   }
-  res.json(withNoteImages(rowToTodo(row)));
+  res.json(withNoteImages(rowToTodo(row), req.userId));
 });
 
 export default router;

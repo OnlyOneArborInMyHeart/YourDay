@@ -103,14 +103,19 @@ if (idCol && idCol.type !== 'INTEGER') {
   db.exec("CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)");
 }
 
-// 每日的自定义主题名（如"项目 A 启动日"）：一行 = 一天
+// 每日的自定义主题名（如"项目 A 启动日"）：一行 = 一个用户的一天。
+// 多用户支持需要 (user_id, date) 联合主键。兼容旧库（PK 仅 date）在 root
+// 种入之后再处理（需要 root.id 来给老数据回填 user_id）。
 db.exec(`
   CREATE TABLE IF NOT EXISTS day_themes (
-    date TEXT PRIMARY KEY,
+    user_id INTEGER,
+    date TEXT NOT NULL,
     title TEXT NOT NULL,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    PRIMARY KEY (date)
   );
 `);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_day_themes_user ON day_themes(user_id);`);
 
 // 总体 To do list（与 events 解耦，独立的"待做事项池"）：
 // - 不绑定具体时段，只关心"什么事项 + 状态 + 优先级 + 截止日"
@@ -159,43 +164,33 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_todo_attachments_created ON todo_attachments(created_at);
 `);
 
-// 每日日记：一天一行（PK=date）。
-// - title 兼容老的"主题名"，长度仍限制 40 字
-// - markdown_content 存原始 Markdown 文本（上限 64KB）
+// 每日日记：(user_id, date) 联合主键
 db.exec(`
   CREATE TABLE IF NOT EXISTS diary_entries (
-    date TEXT PRIMARY KEY,
+    user_id INTEGER,
+    date TEXT NOT NULL,
     title TEXT NOT NULL DEFAULT '',
     markdown_content TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    PRIMARY KEY (date)
   );
 `);
 
-// 已完成事项归档日志：防止 tick 重复触发 / 进程重启等场景下把同一条事项多次写入日记。
-// PK=(date, kind, item_id)：date = 要写入的日记日期（即事项"完成日"）；同一条事项只归档一次。
+// diary_archive_log：(date, user_id, kind, item_id) 联合主键
 db.exec(`
   CREATE TABLE IF NOT EXISTS diary_archive_log (
-    date        TEXT    NOT NULL,
-    kind        TEXT    NOT NULL CHECK(kind IN ('todo','event')),
-    item_id     INTEGER NOT NULL,
-    archived_at TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-    PRIMARY KEY (date, kind, item_id)
+    user_id      INTEGER NOT NULL,
+    date         TEXT    NOT NULL,
+    kind         TEXT    NOT NULL CHECK(kind IN ('todo','event')),
+    item_id      INTEGER NOT NULL,
+    archived_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+    PRIMARY KEY (date, user_id, kind, item_id)
   );
   CREATE INDEX IF NOT EXISTS idx_diary_archive_log_date ON diary_archive_log(date);
 `);
 
-// 兼容旧库：把 day_themes.title 拷到 diary_entries.title（一次性）
-const themeRows = db.prepare('SELECT date, title FROM day_themes').all();
-const insertDiary = db.prepare(
-  `INSERT INTO diary_entries (date, title) VALUES (?, ?)
-   ON CONFLICT(date) DO UPDATE SET
-     title = excluded.title,
-     updated_at = datetime('now','localtime')`
-);
-const tx = db.transaction((rows) => {
-  for (const r of rows) insertDiary.run(r.date, r.title);
-});
-tx(themeRows);
+// 兼容旧库：把 day_themes.title 拷到 diary_entries.title（一次性，幂等）。
+// 实际调用在 ROOT_USER_ID 定义后、day_themes PK 重建前。
 
 // 日记附件：图片 / 视频 / 音频
 db.exec(`
@@ -280,4 +275,160 @@ try {
   /* 列已存在 */
 }
 
+// ===== 用户系统（多租户支持） =====
+// 1. users 表：账号、bcrypt 密码密文、安全问题与答案密文
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    security_question TEXT NOT NULL DEFAULT '',
+    security_answer_hash TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+`);
+
+// 2. 给所有"业务数据表"加 user_id 列，并建索引。
+//    对老数据库：列不存在则添加；老数据 user_id 暂留 NULL，迁移完成后下面会回填为 root.id。
+const OWNED_TABLES = [
+  'events',
+  'day_themes',
+  'todos',
+  'diary_entries',
+  'diary_attachments',
+  'diary_archive_log',
+  'todo_attachments',
+  'event_backgrounds',
+  'music_tracks',
+];
+
+for (const t of OWNED_TABLES) {
+  const cols = db.prepare(`PRAGMA table_info(${t})`).all();
+  if (!cols.some((c) => c.name === 'user_id')) {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN user_id INTEGER DEFAULT NULL`);
+  }
+  // 索引单独 try/catch，因为重复 CREATE INDEX 会抛错
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_${t}_user ON ${t}(user_id)`);
+  } catch {
+    /* ignore */
+  }
+}
+
+// 3. 安全地加载 bcryptjs —— ESM 下既有 default.hashSync 也能直接命名空间引用
+import * as bcryptNs from 'bcryptjs';
+const bcrypt = bcryptNs.default || bcryptNs;
+
+// 4. 种入 root / 123456（如不存在），并把现有数据迁移给它
+const ROOT_USERNAME = 'root';
+let rootRow = db.prepare('SELECT id FROM users WHERE username = ?').get(ROOT_USERNAME);
+if (!rootRow) {
+  const hash = bcrypt.hashSync('123456', 10);
+  const info = db
+    .prepare(
+      `INSERT INTO users (username, password_hash, security_question, security_answer_hash)
+       VALUES (?, ?, '', '')`
+    )
+    .run(ROOT_USERNAME, hash);
+  rootRow = { id: Number(info.lastInsertRowid) };
+  console.log(`[auth] 已创建超级管理员 root（默认密码 123456，请尽快修改）`);
+}
+const ROOT_USER_ID = rootRow.id;
+
+for (const t of OWNED_TABLES) {
+  db.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id IS NULL`).run(ROOT_USER_ID);
+}
+
+// 4b. diary_archive_log PK 重建：从 (date, kind, item_id) 改为 (date, user_id, kind, item_id)
+const logInfo = db.prepare(`PRAGMA table_info(diary_archive_log)`).all();
+const logPkCols = logInfo.filter((c) => c.pk > 0).map((c) => c.name);
+const logNeedsUserPk = !logPkCols.includes('user_id');
+if (logNeedsUserPk) {
+  db.exec(`ALTER TABLE diary_archive_log RENAME TO _diary_archive_log_old;`);
+  db.exec(`
+    CREATE TABLE diary_archive_log (
+      user_id      INTEGER NOT NULL,
+      date         TEXT    NOT NULL,
+      kind         TEXT    NOT NULL CHECK(kind IN ('todo','event')),
+      item_id      INTEGER NOT NULL,
+      archived_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+      PRIMARY KEY (date, user_id, kind, item_id)
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_diary_archive_log_date ON diary_archive_log(date);`);
+  db.exec(`
+    INSERT INTO diary_archive_log (user_id, date, kind, item_id, archived_at)
+    SELECT user_id, date, kind, item_id, archived_at FROM _diary_archive_log_old;
+  `);
+  db.exec(`DROP TABLE _diary_archive_log_old;`);
+  console.log(`[auth] diary_archive_log PK 已迁移为 (date, user_id, kind, item_id)`);
+}
+
+// diary 种子：把 day_themes.title 拷到 diary_entries.title（一次性，幂等）
+// 注意要在 day_themes PK 重建之前/之后都行，但要在 ROOT_USER_ID 之后。
+const _themeSeedRows = db
+  .prepare(`SELECT date, title FROM day_themes WHERE user_id = ?`)
+  .all(ROOT_USER_ID);
+const _insertDiary = db.prepare(
+  `INSERT INTO diary_entries (user_id, date, title) VALUES (?, ?, ?)
+   ON CONFLICT(user_id, date) DO UPDATE SET
+     title = excluded.title,
+     updated_at = datetime('now','localtime')`
+);
+db.transaction((rows) => {
+  for (const r of rows) _insertDiary.run(ROOT_USER_ID, r.date, r.title);
+})(_themeSeedRows);
+
+// 5. day_themes 表 PK 重建：从 (date) 改为 (user_id, date)，让多用户能各有自己的主题
+const themeInfo = db.prepare(`PRAGMA table_info(day_themes)`).all();
+const pkCols = themeInfo.filter((c) => c.pk > 0).map((c) => c.name);
+const needsCompositePk = !(pkCols.includes('user_id') && pkCols.includes('date'));
+if (needsCompositePk) {
+  db.exec(`ALTER TABLE day_themes RENAME TO _day_themes_old;`);
+  db.exec(`
+    CREATE TABLE day_themes (
+      user_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      PRIMARY KEY (user_id, date)
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_day_themes_date ON day_themes(date);`);
+  // 老数据里 user_id 已经被回填为 ROOT_USER_ID；title/date 保留
+  db.exec(`
+    INSERT INTO day_themes (user_id, date, title, updated_at)
+    SELECT user_id, date, title, updated_at FROM _day_themes_old;
+  `);
+  db.exec(`DROP TABLE _day_themes_old;`);
+  console.log(`[auth] day_themes PK 已迁移为 (user_id, date)`);
+}
+
+// 6. diary_entries 表 PK 重建：从 (date) 改为 (user_id, date)
+const diaryInfo = db.prepare(`PRAGMA table_info(diary_entries)`).all();
+const diaryPkCols = diaryInfo.filter((c) => c.pk > 0).map((c) => c.name);
+const diaryNeedsCompositePk = !(diaryPkCols.includes('user_id') && diaryPkCols.includes('date'));
+if (diaryNeedsCompositePk) {
+  db.exec(`ALTER TABLE diary_entries RENAME TO _diary_entries_old;`);
+  db.exec(`
+    CREATE TABLE diary_entries (
+      user_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      markdown_content TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      PRIMARY KEY (user_id, date)
+    );
+  `);
+  db.exec(`
+    INSERT INTO diary_entries (user_id, date, title, markdown_content, updated_at)
+    SELECT user_id, date, title, markdown_content, updated_at FROM _diary_entries_old;
+  `);
+  db.exec(`DROP TABLE _diary_entries_old;`);
+  console.log(`[auth] diary_entries PK 已迁移为 (user_id, date)`);
+}
+
 export default db;
+export { ROOT_USER_ID, ROOT_USERNAME };

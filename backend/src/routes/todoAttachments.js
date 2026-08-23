@@ -77,22 +77,23 @@ router.post('/', (req, res) => {
 
     const info = db
       .prepare(
-        `INSERT INTO todo_attachments (filename, mime, size, original_name)
-         VALUES (?, ?, ?, ?)`
+        `INSERT INTO todo_attachments (filename, mime, size, original_name, user_id)
+         VALUES (?, ?, ?, ?, ?)`
       )
       .run(
         req.file.filename,
         req.file.mimetype,
         req.file.size,
-        decodeOriginalName(req.file.originalname)
+        decodeOriginalName(req.file.originalname),
+        req.userId
       );
 
     const row = db
       .prepare(
         `SELECT id, filename, mime, size, original_name, created_at
-         FROM todo_attachments WHERE id = ?`
+         FROM todo_attachments WHERE id = ? AND user_id = ?`
       )
-      .get(info.lastInsertRowid);
+      .get(info.lastInsertRowid, req.userId);
 
     res.json({
       ...row,
@@ -102,16 +103,15 @@ router.post('/', (req, res) => {
 });
 
 /**
- * 列出全部 todo_attachments（前端需要把所有 ID 转成可访问的 URL 来渲染）。
- * 数据量很小（每条 todo 一般 ≤3 张），全量返回即可。
+ * 列出当前用户全部 todo_attachments。
  */
-router.get('/', (_req, res) => {
+router.get('/', (req, res) => {
   const rows = db
     .prepare(
       `SELECT id, filename, mime, size, original_name, created_at
-       FROM todo_attachments ORDER BY id DESC`
+       FROM todo_attachments WHERE user_id = ? ORDER BY id DESC`
     )
-    .all();
+    .all(req.userId);
   res.json(
     rows.map((r) => ({
       ...r,
@@ -121,7 +121,7 @@ router.get('/', (_req, res) => {
 });
 
 /**
- * 手动删除某张图。前端在编辑 todo 时调用，
+ * 手动删除某张图（仅本人）。前端在编辑 todo 时调用，
  * 删除成功后会同步把 note 里的对应 markdown token 移除。
  */
 router.delete('/:id', (req, res) => {
@@ -129,24 +129,25 @@ router.delete('/:id', (req, res) => {
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: 'id 不合法' });
   }
-  const row = db.prepare('SELECT filename FROM todo_attachments WHERE id = ?').get(id);
+  const row = db
+    .prepare('SELECT filename FROM todo_attachments WHERE id = ? AND user_id = ?')
+    .get(id, req.userId);
   if (!row) return res.status(204).end();
 
-  // 扫描 todos 表，若仍有任何 note 在引用此 id，阻断删除
-  // （避免 note 中残留一个无效的 markdown token）
+  // 扫描 todos 表，若本用户仍有任何 note 在引用此 id，阻断删除
   const refs = db
     .prepare(
       `SELECT id, title FROM todos
-       WHERE note LIKE ?`
+       WHERE user_id = ? AND note LIKE ?`
     )
-    .all(`%todo-img:${id}%`);
+    .all(req.userId, `%todo-img:${id}%`);
   if (refs.length > 0) {
     return res
       .status(409)
       .json({ error: `该图片仍被 ${refs.length} 条 todo 引用，请先移除引用` });
   }
 
-  db.prepare('DELETE FROM todo_attachments WHERE id = ?').run(id);
+  db.prepare('DELETE FROM todo_attachments WHERE id = ? AND user_id = ?').run(id, req.userId);
   const fp = path.join(uploadsDir, row.filename);
   fs.unlink(fp, () => undefined);
   res.status(204).end();

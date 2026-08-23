@@ -1,6 +1,10 @@
 import './App.css';
 import './styles/minecraft-theme.css';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DateHeader } from './components/DateHeader';
 import { EventCalendar } from './components/EventCalendar';
 import { EventList } from './components/EventList';
@@ -23,6 +27,7 @@ import { diariesApi, type Diary } from './api/diaries';
 import { musicApi, parseLRC, type MusicTrack } from './api/music';
 import type { Event, EventDraft, Priority } from './types';
 import { firstOfMonth, lastOfMonth, minutesToTime, monthGridDays, shiftDay, toDateString } from './utils/date';
+import { useAuth } from './auth/AuthContext';
 
 type ModalState =
   | { kind: 'closed' }
@@ -31,7 +36,8 @@ type ModalState =
 
 const LIST_WINDOW_DAYS = 7;
 
-export default function App() {
+export function HomeShell() {
+  const { user, logout } = useAuth();
   const [date, setDate] = useState<string>(toDateString(new Date()));
   const [view, setView] = useState<ViewMode>('timeline');
 
@@ -452,6 +458,19 @@ export default function App() {
           <ViewTabs view={view} onChangeView={setView} />
         </div>
         <div className="app__topbar-actions">
+          {user && (
+            <div className="app__user-chip" title={`已登录为 ${user.username}`}>
+              <span className="app__user-chip-name">{user.username}</span>
+              <button
+                type="button"
+                className="app__user-chip-logout"
+                onClick={logout}
+                aria-label="退出登录"
+              >
+                退出
+              </button>
+            </div>
+          )}
           <button
             type="button"
             className="app__settings-btn"
@@ -632,5 +651,40 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const { user, ready } = useAuth();
+  const location = useLocation();
+  if (!ready) {
+    return (
+      <div style={{ padding: 32, color: '#6b7588', textAlign: 'center' }}>
+        正在校验登录状态…
+      </div>
+    );
+  }
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  return children;
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <HomeShell />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

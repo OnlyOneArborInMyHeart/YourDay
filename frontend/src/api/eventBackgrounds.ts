@@ -1,4 +1,5 @@
 import type { EventBackground } from '../types';
+import { http } from './http';
 
 const BASE = '/api/event-backgrounds';
 
@@ -10,18 +11,10 @@ export const eventBackgroundsApi = {
   upload: async (file: File): Promise<EventBackground> => {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(BASE, { method: 'POST', body: fd });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || `上传失败 (${res.status})`);
-    }
-    return data as EventBackground;
+    return http<EventBackground>(BASE, { method: 'POST', body: fd });
   },
 
   remove: async (id: number): Promise<void> => {
-    const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
-    if (res.status === 204) return;
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `删除失败 (${res.status})`);
+    await http<void>(`${BASE}/${id}`, { method: 'DELETE' });
   },
 };

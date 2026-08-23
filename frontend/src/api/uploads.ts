@@ -1,4 +1,5 @@
 import type { DiaryAttachment } from './diaries';
+import { http } from './http';
 
 const BASE = '/api/uploads';
 
@@ -9,23 +10,11 @@ export const uploadsApi = {
   upload: async (date: string, file: File): Promise<DiaryAttachment> => {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(`${BASE}/${date}`, {
-      method: 'POST',
-      body: fd,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || `上传失败 (${res.status})`);
-    }
-    return data as DiaryAttachment;
+    return http<DiaryAttachment>(`${BASE}/${date}`, { method: 'POST', body: fd });
   },
 
   remove: async (id: number): Promise<void> => {
-    const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
-    if (!res.ok && res.status !== 204) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `删除失败 (${res.status})`);
-    }
+    await http<void>(`${BASE}/${id}`, { method: 'DELETE' });
   },
 
   /**

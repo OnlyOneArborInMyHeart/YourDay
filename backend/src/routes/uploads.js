@@ -109,8 +109,8 @@ router.post('/:date', (req, res) => {
 
     const info = db
       .prepare(
-        `INSERT INTO diary_attachments (date, kind, filename, mime, size, original_name)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO diary_attachments (date, kind, filename, mime, size, original_name, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         date,
@@ -118,15 +118,16 @@ router.post('/:date', (req, res) => {
         req.file.filename,
         req.file.mimetype,
         req.file.size,
-        decodeOriginalName(req.file.originalname)
+        decodeOriginalName(req.file.originalname),
+        req.userId
       );
 
     const row = db
       .prepare(
         `SELECT id, date, kind, filename, mime, size, original_name, created_at
-         FROM diary_attachments WHERE id = ?`
+         FROM diary_attachments WHERE id = ? AND user_id = ?`
       )
-      .get(info.lastInsertRowid);
+      .get(info.lastInsertRowid, req.userId);
 
     res.json({
       ...row,
@@ -141,11 +142,11 @@ router.delete('/:id', (req, res) => {
     return res.status(400).json({ error: 'id 不合法' });
   }
   const row = db
-    .prepare('SELECT filename FROM diary_attachments WHERE id = ?')
-    .get(id);
+    .prepare('SELECT filename FROM diary_attachments WHERE id = ? AND user_id = ?')
+    .get(id, req.userId);
   if (!row) return res.status(204).end();
 
-  db.prepare('DELETE FROM diary_attachments WHERE id = ?').run(id);
+  db.prepare('DELETE FROM diary_attachments WHERE id = ? AND user_id = ?').run(id, req.userId);
   const fp = path.join(uploadsDir, row.filename);
   fs.unlink(fp, () => undefined);
   res.status(204).end();

@@ -1,3 +1,5 @@
+import { http } from './http';
+
 const BASE = '/api/diaries';
 
 export interface DiaryAttachment {
@@ -21,29 +23,17 @@ export interface Diary {
   attachments: DiaryAttachment[];
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `请求失败 (${res.status})`);
-  }
-  return data as T;
-}
-
 export const diariesApi = {
-  get: (date: string) => request<Diary>(`${BASE}/${date}`),
+  get: (date: string) => http<Diary>(`${BASE}/${date}`),
   listRange: (from: string, to: string) =>
-    request<Diary[]>(`${BASE}?from=${from}&to=${to}`),
+    http<Diary[]>(`${BASE}?from=${from}&to=${to}`),
   upsert: (date: string, body: { title?: string; markdown_content?: string }) =>
-    request<Diary>(`${BASE}/${date}`, {
+    http<Diary>(`${BASE}/${date}`, {
       method: 'PUT',
-      body: JSON.stringify(body),
+      body,
     }),
   remove: (date: string) =>
-    request<void>(`${BASE}/${date}`, { method: 'DELETE' }),
+    http<void>(`${BASE}/${date}`, { method: 'DELETE' }),
   listAttachments: (date: string) =>
-    request<DiaryAttachment[]>(`${BASE}/${date}/attachments`),
+    http<DiaryAttachment[]>(`${BASE}/${date}/attachments`),
 };

@@ -7,7 +7,7 @@ const TITLE_MAX = 40;
 const MD_MAX = 64 * 1024;
 
 /**
- * 列出指定日期范围内的日记（附带各自的附件）。
+ * 列出指定日期范围内（当前用户的）日记（附带各自的附件）。
  * 用于日历视图整月一次性拉。
  */
 router.get('/', (req, res) => {
@@ -18,17 +18,19 @@ router.get('/', (req, res) => {
   const rows = db
     .prepare(
       `SELECT date, title, markdown_content, updated_at
-       FROM diary_entries WHERE date BETWEEN ? AND ? ORDER BY date ASC`
+       FROM diary_entries
+       WHERE user_id = ? AND date BETWEEN ? AND ?
+       ORDER BY date ASC`
     )
-    .all(String(from), String(to));
+    .all(req.userId, String(from), String(to));
   if (rows.length === 0) return res.json([]);
   const placeholders = rows.map(() => '?').join(',');
   const atts = db
     .prepare(
       `SELECT id, date, kind, filename, mime, size, original_name, created_at
-       FROM diary_attachments WHERE date IN (${placeholders}) ORDER BY id ASC`
+       FROM diary_attachments WHERE user_id = ? AND date IN (${placeholders}) ORDER BY id ASC`
     )
-    .all(...rows.map((r) => r.date));
+    .all(req.userId, ...rows.map((r) => r.date));
   const byDate = new Map();
   for (const a of atts) {
     if (!byDate.has(a.date)) byDate.set(a.date, []);
@@ -43,14 +45,17 @@ router.get('/:date', (req, res) => {
     return res.status(400).json({ error: 'date 格式应为 YYYY-MM-DD' });
   }
   const row = db
-    .prepare('SELECT date, title, markdown_content, updated_at FROM diary_entries WHERE date = ?')
-    .get(date);
+    .prepare(
+      `SELECT date, title, markdown_content, updated_at
+       FROM diary_entries WHERE user_id = ? AND date = ?`
+    )
+    .get(req.userId, date);
   const attachments = db
     .prepare(
       `SELECT id, date, kind, filename, mime, size, original_name, created_at
-       FROM diary_attachments WHERE date = ? ORDER BY id ASC`
+       FROM diary_attachments WHERE user_id = ? AND date = ? ORDER BY id ASC`
     )
-    .all(date);
+    .all(req.userId, date);
   res.json({
     date,
     title: row?.title ?? '',
@@ -68,18 +73,29 @@ router.put('/:date', (req, res) => {
   const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, TITLE_MAX) : '';
   const md = typeof req.body?.markdown_content === 'string' ? req.body.markdown_content.slice(0, MD_MAX) : '';
 
-  db.prepare(
-    `INSERT INTO diary_entries (date, title, markdown_content, updated_at)
-     VALUES (?, ?, ?, datetime('now','localtime'))
-     ON CONFLICT(date) DO UPDATE SET
-       title = excluded.title,
-       markdown_content = excluded.markdown_content,
-       updated_at = datetime('now','localtime')`
-  ).run(date, title, md);
+  // upsert：基于 (user_id, date) 联合主键
+  const existing = db
+    .prepare('SELECT date FROM diary_entries WHERE user_id = ? AND date = ?')
+    .get(req.userId, date);
+  if (existing) {
+    db.prepare(
+      `UPDATE diary_entries
+       SET title = ?, markdown_content = ?, updated_at = datetime('now','localtime')
+       WHERE user_id = ? AND date = ?`
+    ).run(title, md, req.userId, date);
+  } else {
+    db.prepare(
+      `INSERT INTO diary_entries (user_id, date, title, markdown_content, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now','localtime'))`
+    ).run(req.userId, date, title, md);
+  }
 
   const row = db
-    .prepare('SELECT date, title, markdown_content, updated_at FROM diary_entries WHERE date = ?')
-    .get(date);
+    .prepare(
+      `SELECT date, title, markdown_content, updated_at
+       FROM diary_entries WHERE user_id = ? AND date = ?`
+    )
+    .get(req.userId, date);
   res.json(row);
 });
 
@@ -88,7 +104,7 @@ router.delete('/:date', (req, res) => {
   if (!DATE_RE.test(date)) {
     return res.status(400).json({ error: 'date 格式应为 YYYY-MM-DD' });
   }
-  db.prepare('DELETE FROM diary_entries WHERE date = ?').run(date);
+  db.prepare('DELETE FROM diary_entries WHERE user_id = ? AND date = ?').run(req.userId, date);
   // 附件由 uploads 路由 / 清理流程处理
   res.status(204).end();
 });
@@ -102,9 +118,9 @@ router.get('/:date/attachments', (req, res) => {
   const rows = db
     .prepare(
       `SELECT id, date, kind, filename, mime, size, original_name, created_at
-       FROM diary_attachments WHERE date = ? ORDER BY id ASC`
+       FROM diary_attachments WHERE user_id = ? AND date = ? ORDER BY id ASC`
     )
-    .all(date);
+    .all(req.userId, date);
   res.json(rows);
 });
 

@@ -1,0 +1,129 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f6f7fb 0%, #e9edf5 100%);
+  padding: 24px;
+  font-family: inherit;
+}
+
+.auth-page__card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(20, 30, 60, 0.08), 0 2px 4px rgba(20, 30, 60, 0.04);
+  padding: 32px 32px 28px;
+}
+
+.auth-page__title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2538;
+}
+
+.auth-page__subtitle {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: #6b7588;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-form__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #4a5168;
+  font-weight: 500;
+}
+
+.auth-form__input,
+.auth-form__select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d8dde7;
+  font-size: 14px;
+  color: #1f2538;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-form__input:focus,
+.auth-form__select:focus {
+  border-color: #6e8dfa;
+  box-shadow: 0 0 0 3px rgba(110, 141, 250, 0.18);
+}
+
+.auth-form__button {
+  margin-top: 4px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6e8dfa 0%, #5a78ea 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.auth-form__button:hover { opacity: 0.95; }
+.auth-form__button:active { transform: translateY(1px); }
+.auth-form__button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.auth-form__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef3f3;
+  color: #b14141;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-form__hint {
+  margin: 0;
+  font-size: 12px;
+  color: #8a92a8;
+}
+
+.auth-form__footer {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7588;
+}
+
+.auth-form__link {
+  color: #5a78ea;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.auth-form__link:hover { text-decoration: underline; }
+
+.auth-form__custom-question {
+  margin-top: 6px;
+}
+
+/* 顶部 Logo 占位 */
+.auth-page__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  font-weight: 700;
+  color: #1f2538;
+  font-size: 16px;
+}

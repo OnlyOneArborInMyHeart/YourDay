@@ -147,8 +147,8 @@ router.post('/', (req, res) => {
 
     const info = db
       .prepare(
-        `INSERT INTO event_backgrounds (filename, mime, size, width, height, original_name)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO event_backgrounds (filename, mime, size, width, height, original_name, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         req.file.filename,
@@ -156,15 +156,16 @@ router.post('/', (req, res) => {
         req.file.size,
         width,
         height,
-        decodeOriginalName(req.file.originalname)
+        decodeOriginalName(req.file.originalname),
+        req.userId
       );
 
     const row = db
       .prepare(
         `SELECT id, filename, mime, size, width, height, original_name, created_at
-         FROM event_backgrounds WHERE id = ?`
+         FROM event_backgrounds WHERE id = ? AND user_id = ?`
       )
-      .get(info.lastInsertRowid);
+      .get(info.lastInsertRowid, req.userId);
 
     res.json({
       ...row,
@@ -178,18 +179,20 @@ router.delete('/:id', (req, res) => {
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: 'id 不合法' });
   }
-  const row = db.prepare('SELECT filename FROM event_backgrounds WHERE id = ?').get(id);
+  const row = db
+    .prepare('SELECT filename FROM event_backgrounds WHERE id = ? AND user_id = ?')
+    .get(id, req.userId);
   if (!row) return res.status(204).end();
 
-  // 若该背景图仍被某些事件引用，不允许删除（避免渲染空 src）
+  // 若该背景图仍被本用户的某些事件引用，不允许删除（避免渲染空 src）
   const usage = db
-    .prepare('SELECT COUNT(*) AS n FROM events WHERE background_image_id = ?')
-    .get(id);
+    .prepare('SELECT COUNT(*) AS n FROM events WHERE user_id = ? AND background_image_id = ?')
+    .get(req.userId, id);
   if (usage && usage.n > 0) {
     return res.status(409).json({ error: `该背景图仍被 ${usage.n} 个事件引用，无法删除` });
   }
 
-  db.prepare('DELETE FROM event_backgrounds WHERE id = ?').run(id);
+  db.prepare('DELETE FROM event_backgrounds WHERE id = ? AND user_id = ?').run(id, req.userId);
   const fp = path.join(uploadsDir, row.filename);
   fs.unlink(fp, () => undefined);
   res.status(204).end();

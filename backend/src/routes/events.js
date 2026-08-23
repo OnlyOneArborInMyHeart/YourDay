@@ -36,7 +36,7 @@ function validateEventBody(body) {
     if (!Number.isInteger(n) || n <= 0) {
       errors.push('background_image_id 应为正整数或 null');
     } else {
-      const exists = db.prepare('SELECT id FROM event_backgrounds WHERE id = ?').get(n);
+      const exists = db.prepare('SELECT id FROM event_backgrounds WHERE id = ? AND user_id = ?').get(n, req.userId);
       if (!exists) errors.push('background_image_id 指向的背景图不存在');
       else bgId = n;
     }
@@ -68,9 +68,9 @@ function decorateWithBackground(row) {
     const r = db
       .prepare(
         `SELECT id, filename, mime, width, height, original_name
-         FROM event_backgrounds WHERE id = ?`
+         FROM event_backgrounds WHERE id = ? AND user_id = ?`
       )
-      .get(row.background_image_id);
+      .get(row.background_image_id, row.user_id);
     if (r) {
       bg = {
         id: r.id,
@@ -97,19 +97,31 @@ router.get('/', (req, res) => {
 
   let rows;
   if (date) {
-    rows = db.prepare('SELECT * FROM events WHERE id IS NOT NULL AND date = ? ORDER BY start_time ASC').all(date);
+    rows = db
+      .prepare(
+        'SELECT * FROM events WHERE user_id = ? AND date = ? ORDER BY start_time ASC'
+      )
+      .all(req.userId, date);
   } else if (from && to) {
     rows = db
-      .prepare('SELECT * FROM events WHERE id IS NOT NULL AND date BETWEEN ? AND ? ORDER BY date ASC, start_time ASC')
-      .all(from, to);
+      .prepare(
+        'SELECT * FROM events WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC, start_time ASC'
+      )
+      .all(req.userId, from, to);
   } else {
-    rows = db.prepare('SELECT * FROM events WHERE id IS NOT NULL ORDER BY date DESC, start_time ASC LIMIT 200').all();
+    rows = db
+      .prepare(
+        'SELECT * FROM events WHERE user_id = ? ORDER BY date DESC, start_time ASC LIMIT 200'
+      )
+      .all(req.userId);
   }
   res.json(rows.map(decorateWithBackground));
 });
 
 router.get('/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  const row = db
+    .prepare('SELECT * FROM events WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!row) return res.status(404).json({ error: '事件不存在' });
   res.json(decorateWithBackground(row));
 });
@@ -124,19 +136,29 @@ router.post('/', (req, res) => {
 
   const now = new Date().toISOString();
   const stmt = db.prepare(`
-    INSERT INTO events (date, title, start_time, end_time, priority, note, done, created_at, updated_at, background_image_id, is_todo)
-    VALUES (@date, @title, @start_time, @end_time, @priority, @note, @done, @created_at, @updated_at, @background_image_id, @is_todo)
+    INSERT INTO events (date, title, start_time, end_time, priority, note, done, created_at, updated_at, background_image_id, is_todo, user_id)
+    VALUES (@date, @title, @start_time, @end_time, @priority, @note, @done, @created_at, @updated_at, @background_image_id, @is_todo, @user_id)
   `);
-  const result = stmt.run({ date, ...value, created_at: now, updated_at: now });
+  const result = stmt.run({
+    date,
+    ...value,
+    created_at: now,
+    updated_at: now,
+    user_id: req.userId,
+  });
   if (!result.lastInsertRowid) {
     return res.status(500).json({ error: '插入失败，事件 id 未生成' });
   }
-  const row = db.prepare('SELECT * FROM events WHERE id = ?').get(result.lastInsertRowid);
+  const row = db
+    .prepare('SELECT * FROM events WHERE id = ? AND user_id = ?')
+    .get(result.lastInsertRowid, req.userId);
   res.status(201).json(decorateWithBackground(row));
 });
 
 router.put('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  const existing = db
+    .prepare('SELECT * FROM events WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: '事件不存在' });
 
   // background_image_id 允许显式传 null 来清除背景；省略则保留原值
@@ -185,10 +207,12 @@ router.put('/:id', (req, res) => {
         background_image_id=@background_image_id, is_todo=@is_todo,
         completed_at=${completed_at_expr},
         updated_at=datetime('now','localtime')
-    WHERE id=@id
+    WHERE id=@id AND user_id=@user_id
   `);
-  stmt.run({ id: req.params.id, ...value });
-  const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  stmt.run({ id: req.params.id, user_id: req.userId, ...value });
+  const row = db
+    .prepare('SELECT * FROM events WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   // done 0→1 那一刻立刻把这一项归档到"完成日"对应日记末尾
   // （跨日 tick 还会兜底，但完成动作能即时反映在日历上）
   if (!wasDone && mergedDone === 1) {
@@ -210,7 +234,9 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  const existing = db
+    .prepare('SELECT * FROM events WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: '事件不存在' });
 
   // 删除前清理日记归档（不论 done 状态；之前 done 过归档过的都要撤回）
@@ -220,7 +246,9 @@ router.delete('/:id', (req, res) => {
     console.warn('[diary-archive] 删除 event 前清理归档失败（不影响主流程）', err);
   }
 
-  const result = db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
+  const result = db
+    .prepare('DELETE FROM events WHERE id = ? AND user_id = ?')
+    .run(req.params.id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: '事件不存在' });
   res.status(204).end();
 });
