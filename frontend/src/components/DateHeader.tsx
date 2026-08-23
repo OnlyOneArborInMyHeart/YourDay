@@ -57,6 +57,29 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePl
   const [themeDraft, setThemeDraft] = useState('');
   const themeInputRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<{ seekTo: (ratio: number) => void; togglePlay: () => void }>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+  const playerRowRef = useRef<HTMLDivElement>(null);
+
+  /* 让下方导航行的宽度实时跟随唱片行宽度，二者便可在视觉上左右居中 */
+  useEffect(() => {
+    const row = playerRowRef.current;
+    const nav = navRef.current;
+    if (!row || !nav) return;
+    const sync = () => {
+      const w = row.getBoundingClientRect().width;
+      // 宽度等于 player-row，再整体向左偏移 10px 让按钮相对唱片机往左挪
+      nav.style.width = `${w}px`;
+      nav.style.marginLeft = '-30px';
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(row);
+    window.addEventListener('resize', sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
 
   const lunar = getLunarInfo(date);
   const holiday = getHolidayInfo(date);
@@ -101,7 +124,7 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePl
       {/* 左侧：唱片（上） + 日期导航（下） */}
       <div className="date-header__nav">
         {/* 黑胶唱片 + 歌词按钮 */}
-        <div className="date-header__player-row">
+        <div className="date-header__player-row" ref={playerRowRef}>
           <RecordPlayer
             ref={playerRef}
             library={musicLibrary}
@@ -121,7 +144,7 @@ export const DateHeader = forwardRef<{ seekTo: (ratio: number) => void; togglePl
           </button>
         </div>
 
-        <div className="date-header__nav-row">
+        <div className="date-header__nav-row" ref={navRef}>
           <button
             className="icon-btn"
             onClick={() => onChange(shiftDay(date, -1))}

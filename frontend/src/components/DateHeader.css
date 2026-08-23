@@ -17,7 +17,7 @@
 .date-header__nav {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 8px;
     min-width: 0;
 }
@@ -27,6 +27,14 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
+}
+
+.date-header__nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* 宽度由 JS 同步自 player-row，使其与唱片行严格等宽并水平居中 */
 }
 
 .date-header__progress-row {
@@ -113,16 +121,6 @@
 
 .date-header__lyrics-btn:active {
     transform: scale(0.95);
-}
-
-.date-header__nav-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    /* 不与左边对齐，整体右移让三个按钮落在唱片下方，
-     视觉重心与黑胶唱片区协调（不再贴着 nav 最左边） */
-    align-self: center;
-    padding-left: 14px;
 }
 
 .date-header__today-btn {

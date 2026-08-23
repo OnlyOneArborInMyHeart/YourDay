@@ -1,20 +1,23 @@
 /* 总体待做面板 */
 .todo-board {
-  margin-top: 18px;
+  margin-top: 0;
   background: var(--color-bg-elev);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
-  padding: 22px 24px 26px;
+  /* 上下内边距对称，保证卡片视觉上各边的圆角到内容距离一致 */
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  /* 与 .todo-board__head gap 同步，让 filters 上下等距 */
+  gap: 16px;
 }
 
 .todo-board__head {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* filters 上下等距的关键：上方 = head 顶到 filters，下方 = filters 到 head 底 */
+  gap: 16px;
 }
 
 .todo-board__title-row {

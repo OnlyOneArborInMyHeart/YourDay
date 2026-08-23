@@ -1,71 +1,88 @@
 .app-error {
-  margin-top: 14px;
-  padding: 10px 16px;
-  background: var(--p1-bg);
-  color: var(--p1-text);
-  border: 1px solid var(--p1-border);
-  border-radius: var(--radius-md);
-  font-size: 13px;
+    margin-top: 14px;
+    padding: 10px 16px;
+    background: var(--p1-bg);
+    color: var(--p1-text);
+    border: 1px solid var(--p1-border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
 }
 
+
 /* 顶栏：左侧 Logo，右侧 ViewTabs */
+
 .app__topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 18px;
-  padding: 12px 18px;
-  background: var(--color-bg-elev);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 18px;
+    padding: 12px 18px;
+    background: var(--color-bg-elev);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
 }
+
+
+/* 统一主卡片（DateHeader / Legend / 各视图主体）的等距离。
+   卡片自身的 margin-top 全部归零，仅靠 .app > 兄弟 margin-bottom 提供间距。 */
+
+.app>.date-header,
+.app>.legend,
+.app>.timeline-page,
+.app>.todo-board,
+.app>.event-list,
+.app>.event-calendar {
+    margin-bottom: 10px;
+}
+
 .app__topbar-tabs {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
 }
+
 .app__topbar-tabs .view-tabs {
-  margin-bottom: 0;
-  flex: 1 1 auto;
-  width: 100%;
+    margin-bottom: 0;
+    flex: 1 1 auto;
+    width: 100%;
 }
 
 .app-loading {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  font-size: 12px;
-  color: var(--color-text-soft);
-  background: var(--color-bg-elev);
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  z-index: 5;
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 12px;
+    color: var(--color-text-soft);
+    background: var(--color-bg-elev);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    z-index: 5;
 }
 
-/* 时间轴页：左 Timeline + 右 TodoList */
+
+/* 时间轴页：左 Timeline + 右 TodoList —— 间距由 .app > 兄弟规则统一 */
+
 .timeline-page {
-  display: flex;
-  gap: 18px;
-  align-items: stretch;
-  margin-top: 18px;
+    display: flex;
+    gap: 18px;
+    align-items: stretch;
 }
 
 .timeline-page .timeline {
-  margin-top: 0; /* 父容器已加间距 */
-  flex: 1;
-  min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 @media (max-width: 960px) {
-  .timeline-page {
-    flex-direction: column;
-  }
-  .timeline-page .todo-list {
-    width: 100%;
-    max-height: 360px;
-  }
+    .timeline-page {
+        flex-direction: column;
+    }
+    .timeline-page .todo-list {
+        width: 100%;
+        max-height: 360px;
+    }
 }
