@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './auth.css';
@@ -32,10 +32,26 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-page__card">
+    <div className="auth-page auth-page--sakura">
+      <div className="sakura-fall" aria-hidden="true">
+        {Array.from({ length: 24 }, (_, index) => (
+          <span
+            className="sakura-petal"
+            key={index}
+            style={{
+              '--petal-x': `${(index * 37 + 7) % 100}%`,
+              '--petal-delay': `${-(index * 0.91)}s`,
+              '--petal-duration': `${7.5 + (index % 6) * 1.25}s`,
+              '--petal-drift-mid': `${index % 2 === 0 ? 58 : -58}px`,
+              '--petal-drift-end': `${index % 3 === 0 ? -34 : 42}px`,
+              '--petal-size': `${12 + (index % 5) * 2.4}px`,
+            } as CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="auth-page__card auth-page__card--sakura">
         <div className="auth-page__brand">
-          <span>📅</span>
+          <span className="auth-page__brand-mark" aria-hidden="true" />
           <span>YourDay</span>
         </div>
         <h1 className="auth-page__title">登录</h1>

@@ -149,3 +149,168 @@
 }
 
 .auth-form__admin-link:hover { color: #4f46e5; }
+
+/*
+ * Sakura login design system
+ * Palette: ink #2c2730, petal #d88992, mist #eef3f8, paper rgba(255,252,251,.9)
+ * Type: Songti/serif display + existing UI sans for controls
+ * Rhythm: 8/12/18/28; radius 4/12; one restrained paper shadow
+ */
+.auth-page--sakura {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: #aebfd5;
+  background-image:
+    linear-gradient(rgba(32, 39, 54, .08), rgba(32, 39, 54, .15)),
+    url('/login-sakura.png');
+  background-size: cover, 100% 100%;
+  background-position: center, center;
+  background-repeat: no-repeat;
+}
+
+.auth-page--sakura::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(237, 244, 250, .08) 0 18%, rgba(29, 31, 42, .08) 100%);
+}
+
+.auth-page__card--sakura {
+  position: relative;
+  z-index: 2;
+  width: min(390px, calc(100vw - 48px));
+  max-width: none;
+  padding: 31px 34px 27px;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 12px;
+  background: rgba(255, 252, 251, .88);
+  box-shadow: 0 22px 70px rgba(29, 28, 38, .2), inset 0 1px rgba(255, 255, 255, .72);
+  backdrop-filter: blur(15px) saturate(.84);
+  -webkit-backdrop-filter: blur(15px) saturate(.84);
+}
+
+.auth-page__card--sakura .auth-page__brand {
+  justify-content: center;
+  margin-bottom: 19px;
+  color: #352d35;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', SimSun, serif;
+  font-size: 18px;
+  letter-spacing: .14em;
+}
+
+.auth-page__brand-mark {
+  width: 13px;
+  height: 13px;
+  border-radius: 70% 25% 70% 25%;
+  background: #d88992;
+  box-shadow: 7px -3px 0 -2px #ecb1b7;
+  transform: rotate(28deg);
+}
+
+.auth-page__card--sakura .auth-page__title {
+  color: #2c2730;
+  font-family: 'Noto Serif SC', 'Songti SC', SimSun, serif;
+  font-size: 25px;
+  letter-spacing: .12em;
+  text-align: center;
+}
+
+.auth-page__card--sakura .auth-page__subtitle {
+  color: #736c78;
+  text-align: center;
+}
+
+.auth-page__card--sakura .auth-form__input {
+  border-color: rgba(92, 82, 91, .22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.auth-page__card--sakura .auth-form__input:focus {
+  border-color: #cf818c;
+  box-shadow: 0 0 0 3px rgba(207, 129, 140, .15);
+}
+
+.auth-page__card--sakura .auth-form__button {
+  border-radius: 8px;
+  background: #4a3d43;
+  box-shadow: 0 8px 20px rgba(60, 45, 51, .18);
+}
+
+.auth-page__card--sakura .auth-form__button:hover { background: #5b474f; }
+.auth-page__card--sakura .auth-form__link { color: #a45463; }
+.auth-page__card--sakura .auth-form__admin-link { color: #726a73; }
+
+.sakura-fall {
+  position: absolute;
+  inset: -12vh 0 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sakura-petal {
+  --petal-x: 50%;
+  --petal-delay: 0s;
+  --petal-duration: 10s;
+  --petal-drift-mid: 58px;
+  --petal-drift-end: -34px;
+  --petal-size: 14px;
+  position: absolute;
+  top: -28px;
+  left: var(--petal-x);
+  width: var(--petal-size);
+  height: calc(var(--petal-size) * .72);
+  border-radius: 75% 20% 70% 28%;
+  background: linear-gradient(145deg, #fff7fa 8%, #f39bad 52%, #d96e87 100%);
+  box-shadow: 0 3px 9px rgba(110, 57, 69, .34);
+  opacity: 0;
+  animation: sakura-falling var(--petal-duration) linear var(--petal-delay) infinite;
+  will-change: transform, opacity;
+}
+
+.sakura-petal::after {
+  content: '';
+  position: absolute;
+  width: 46%;
+  height: 60%;
+  right: -18%;
+  top: 18%;
+  border-radius: 70% 25% 70% 25%;
+  background: inherit;
+  transform: rotate(38deg);
+}
+
+@keyframes sakura-falling {
+  0% { opacity: 0; transform: translate3d(0, -4vh, 0) rotate(0deg) scale(.85); }
+  6% { opacity: .96; }
+  40% { opacity: .92; transform: translate3d(var(--petal-drift-mid), 43vh, 0) rotate(190deg) scale(1); }
+  72% { opacity: .86; transform: translate3d(var(--petal-drift-end), 80vh, 0) rotate(335deg) scale(.94); }
+  100% { opacity: 0; transform: translate3d(var(--petal-drift-mid), 118vh, 0) rotate(540deg) scale(.78); }
+}
+
+@media (min-width: 761px) {
+  .auth-page__card--sakura {
+    transform: scale(.96);
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-page--sakura {
+    background-size: cover, 100% 100%;
+    background-position: center, center;
+  }
+
+  .auth-page__card--sakura {
+    width: min(370px, calc(100vw - 32px));
+    padding: 27px 24px 24px;
+    background: rgba(255, 252, 251, .92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sakura-petal { animation-duration: 18s; }
+}
