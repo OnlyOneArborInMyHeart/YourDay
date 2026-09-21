@@ -79,6 +79,11 @@ export function LoginPage() {
           <span aria-hidden> · </span>
           <Link to="/privacy" className="auth-form__link">隐私政策</Link>
         </p>
+        <div className="auth-form__admin-entry">
+          <Link to="/admin/login" className="auth-form__admin-link">
+            🛡️ 管理员入口
+          </Link>
+        </div>
       </div>
     </div>
   );

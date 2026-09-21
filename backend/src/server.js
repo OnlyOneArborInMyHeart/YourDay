@@ -18,6 +18,7 @@ import eventBackgroundsRouter from './routes/eventBackgrounds.js';
 import todoAttachmentsRouter from './routes/todoAttachments.js';
 import musicRouter from './routes/music.js';
 import authRouter from './routes/auth.js';
+import adminRouter from './routes/admin.js';
 import { verifyToken } from './middleware/auth.js';
 import { startCarryOverScheduler, runCarryOverNow } from './carryover.js';
 import { runArchiveNow, archiveCompletedToYesterdayIfNewDay } from './diaryArchive.js';
@@ -108,9 +109,13 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'YourDay API' }
 
 // 认证路由（公开，但单独限流）
 app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/admin/login', authLimiter);
 
 // 通用 API 限流
 app.use('/api', apiLimiter);
+
+// 管理后台：登录接口上面已叠加更严格的限流，其余查询使用通用 API 限流。
+app.use('/api/admin', adminRouter);
 
 // 所有业务路由需要先用 verifyToken 校验 JWT；后续路由内可使用 req.userId
 app.use('/api/events', verifyToken, eventsRouter);

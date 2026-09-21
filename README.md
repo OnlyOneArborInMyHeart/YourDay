@@ -73,6 +73,16 @@ npm run build
 npm run preview
 ```
 
+## 更新已部署的服务器
+
+Windows 下可使用项目自带的一键部署脚本：
+
+```powershell
+.\scripts\deploy.ps1
+```
+
+脚本会构建前端、备份线上 SQLite 数据库、上传新版本、重启服务并完成公网健康检查。详见 [`docs/UPDATE.md`](docs/UPDATE.md)。
+
 ## REST API
 
 | Method | Path | 说明 |

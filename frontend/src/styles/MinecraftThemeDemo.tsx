@@ -308,7 +308,7 @@ export default function MinecraftThemeDemo() {
           display: 'flex', justifyContent: 'center', gap: 6,
           padding: '20px 0', opacity: 0.4
         }}>
-          {['🟫','🟩','🟫','🟩','🟫','🟩','🟫','🟩','🟫'].map((c, i) => (
+          {['🟫','🟩','🟫','🟩','🟫','🟩','🟫','🟩','🟫'].map((_, i) => (
             <span key={i} style={{
               width: 12, height: 12, background: i % 2 === 0 ? 'var(--mc-dirt)' : 'var(--mc-grass)',
               display: 'inline-block', borderRadius: 2

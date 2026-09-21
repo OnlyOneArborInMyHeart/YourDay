@@ -6,6 +6,8 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LegalPage } from './pages/LegalPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import './pages/LegalPage.css';
 import { DateHeader } from './components/DateHeader';
 import { EventCalendar } from './components/EventCalendar';
@@ -690,6 +692,8 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/privacy" element={<LegalPage kind="privacy" />} />
       <Route path="/terms" element={<LegalPage kind="terms" />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin" element={<AdminDashboardPage />} />
       <Route
         path="/"
         element={

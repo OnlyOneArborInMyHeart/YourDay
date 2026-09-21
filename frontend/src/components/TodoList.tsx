@@ -35,8 +35,6 @@ export function TodoList({ events, onToggleDone, onSelectEvent, onAdded, date }:
   const [addNote, setAddNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const todayStr = toDateString(new Date());
-
   // 显示纯待办项 + 当前日带时间的日程（统一标记为待办风格）
   const todoEvents = useMemo(() => {
     const list = events.filter((e) => e.isTodo || !!e.start_time);

@@ -63,6 +63,28 @@ export const api = {
   del: <T,>(url: string) => request<T>('DELETE', url),
 };
 
+/** 真实 fetch 上传文件（用于 multipart） */
+export async function uploadFile<T>(
+  url: string,
+  file: File,
+  extraFields: Record<string, string> = {}
+): Promise<T> {
+  const form = new FormData();
+  form.append('file', file);
+  for (const [k, v] of Object.entries(extraFields)) form.append(k, v);
+  const headers: Record<string, string> = {};
+  const tk = getToken();
+  if (tk) headers.authorization = `Bearer ${tk}`;
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+  const res = await fetch(fullUrl, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    let payload: unknown = null;
+    try { payload = await res.json(); } catch { /* ignore */ }
+    throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status, payload });
+  }
+  return (await res.json()) as T;
+}
+
 // ===== 模拟 wxlogin =====
 export interface WxLoginNeedBind {
   needBind: true;

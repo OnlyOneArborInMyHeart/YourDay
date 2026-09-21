@@ -287,11 +287,19 @@ db.exec(`
     wx_openid TEXT,
     wx_unionid TEXT,
     wx_bound_at TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 `);
+
+// 旧数据库升级：增加管理员标记。
+try {
+  db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+} catch {
+  /* 列已存在 */
+}
 
 // 给已存在的库添加微信绑定字段（幂等迁移）。
 for (const col of ['wx_openid', 'wx_unionid', 'wx_bound_at']) {
@@ -337,6 +345,26 @@ for (const t of OWNED_TABLES) {
 // 3. 安全地加载 bcryptjs —— ESM 下既有 default.hashSync 也能直接命名空间引用
 import * as bcryptNs from 'bcryptjs';
 const bcrypt = bcryptNs.default || bcryptNs;
+
+// 本地开发环境初始化 admin / 123456。生产环境必须显式提供密码，
+// 避免默认弱密码随代码发布到公网。
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_INITIAL_PASSWORD = process.env.ADMIN_INITIAL_PASSWORD
+  || (IS_PRODUCTION ? '' : '123456');
+if (ADMIN_INITIAL_PASSWORD) {
+  const adminRow = db.prepare('SELECT id, is_admin FROM users WHERE username = ?').get(ADMIN_USERNAME);
+  if (!adminRow) {
+    db.prepare(
+      `INSERT INTO users
+       (username, password_hash, security_question, security_answer_hash, is_admin)
+       VALUES (?, ?, '', '', 1)`
+    ).run(ADMIN_USERNAME, bcrypt.hashSync(ADMIN_INITIAL_PASSWORD, 12));
+    console.log(`[auth] 已创建管理员 ${ADMIN_USERNAME}`);
+  } else if (!adminRow.is_admin) {
+    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(adminRow.id);
+  }
+}
 
 // 4. 种入 root / 123456（如不存在），并把现有数据迁移给它
 const ROOT_USERNAME = 'root';

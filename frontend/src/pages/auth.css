@@ -134,3 +134,18 @@
   color: #1f2538;
   font-size: 16px;
 }
+
+.auth-form__admin-entry {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f5;
+  text-align: center;
+}
+
+.auth-form__admin-link {
+  color: #59657b;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.auth-form__admin-link:hover { color: #4f46e5; }

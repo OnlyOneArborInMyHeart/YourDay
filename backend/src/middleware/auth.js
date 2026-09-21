@@ -36,6 +36,15 @@ export function signAuthToken(user) {
   );
 }
 
+/** 签发独立的管理员会话，避免与普通用户 token 混用。 */
+export function signAdminToken(user) {
+  return jwt.sign(
+    { uid: user.id, uname: user.username, scope: 'admin' },
+    JWT_SECRET,
+    { expiresIn: TOKEN_TTL }
+  );
+}
+
 /**
  * 签发一次性"重置密码" token（scope: reset + 单次使用）
  */
@@ -79,6 +88,28 @@ export function verifyToken(req, res, next) {
   req.userId = user.id;
   req.username = user.username;
   req.tokenPayload = payload;
+  next();
+}
+
+/** 管理员路由中间件：同时校验 token scope 和数据库中的管理员标记。 */
+export function verifyAdminToken(req, res, next) {
+  const auth = req.header('authorization') || req.header('Authorization');
+  if (!auth || !auth.toLowerCase().startsWith('bearer ')) {
+    return res.status(401).json({ error: '管理员未登录或登录已过期' });
+  }
+  const token = auth.slice(7).trim();
+  const payload = verifyTokenRaw(token);
+  if (!payload || payload.scope !== 'admin' || !payload.uid) {
+    return res.status(401).json({ error: '管理员登录已过期' });
+  }
+  const user = db
+    .prepare('SELECT id, username FROM users WHERE id = ? AND is_admin = 1')
+    .get(payload.uid);
+  if (!user) {
+    return res.status(403).json({ error: '当前账号没有管理员权限' });
+  }
+  req.adminId = user.id;
+  req.adminUsername = user.username;
   next();
 }
 
